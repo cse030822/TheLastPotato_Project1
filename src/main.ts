@@ -252,7 +252,7 @@ pip.dataset.mode = "pip";
 
 // 개발 편의용 디버그 훅(프로덕션 번들에는 포함되지 않음).
 if (import.meta.env.DEV) {
-  (window as unknown as { __mars: unknown }).__mars = { mars, tracker, jets, beamRight, beamLeft, bugs, garden, THREE };
+  (window as unknown as { __mars: unknown }).__mars = { mars, tracker, jets, beamRight, beamLeft, bugs, garden, gameHud, harvestFx, THREE };
 }
 
 boot();

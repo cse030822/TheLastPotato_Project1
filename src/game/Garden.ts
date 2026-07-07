@@ -41,7 +41,11 @@ export class Garden {
   private readonly energizeRadius = 1.8;
   private readonly growthRate = 0.05; // 초당 성장(약 20초에 완전 성숙 — 감자알을 모두 맺기까지)
   private ended = false;
-  private energyElapsed = 0; // 에너지 단계 진입 후 경과(초) — HUD 타이머용
+  private missionElapsed = 0; // 첫 씨앗을 심은 순간부터의 경과(초) — HUD 타이머·승리 판정용
+  private timerStarted = false; // 첫 씨앗을 심으면 타이머 시작
+  readonly survivalDuration = 60; // 60초 방어 목표
+  /** 승리 사유: 감자를 모두 키움("grown") vs 60초 방어 성공("survived"). */
+  winReason: "grown" | "survived" | null = null;
 
   /** 감자알이 새로 돋을 때(월드 좌표) 호출 — 수확 연출·사운드용. main이 주입. */
   onHarvest: ((worldPos: THREE.Vector3) => void) | null = null;
@@ -55,9 +59,14 @@ export class Garden {
     // 감자는 플레이어가 씨앗을 쏴서 직접 배치한다(초기엔 아무것도 없음).
   }
 
-  /** 에너지 단계 이후 경과 시간(초). HUD 타이머 표시용. */
+  /** 첫 씨앗을 심은 순간부터의 경과 시간(초). WAVE 계산 등에 사용. */
   get elapsedSec(): number {
-    return this.energyElapsed;
+    return this.missionElapsed;
+  }
+
+  /** 60초 방어 카운트다운 남은 시간(초). HUD 타이머 표시용. */
+  get timeLeft(): number {
+    return Math.max(0, this.survivalDuration - this.missionElapsed);
   }
 
   /** 지금까지 수확한 감자알 총합. */
@@ -107,6 +116,7 @@ export class Garden {
     pot.onTuberPop = (wp) => this.onHarvest?.(wp); // 감자알이 돋을 때 연출/사운드
     this.scene.add(pot.group);
     this.potatoes.push(pot);
+    this.timerStarted = true; // 첫 씨앗을 심는 순간부터 60초 카운트다운 시작
 
     // 테라건에서 씨앗이 날아와 심긴다(도착 시 씨감자 노출).
     const seedMat = new THREE.MeshStandardMaterial({ color: 0x9c7a4d, roughness: 0.9 });
@@ -192,7 +202,8 @@ export class Garden {
       this.phaseT = 0;
     }
 
-    if (this.phase === "energy") this.energyElapsed += dt;
+    // 타이머는 첫 씨앗을 심은 순간부터(심기·퇴비·에너지 단계 관통) 게임 종료 전까지 흐른다.
+    if (this.timerStarted && !this.ended) this.missionElapsed += dt;
 
     // 에너지 공급 판정: 감자별로 이번 프레임 발광 여부를 갱신
     for (const pot of this.potatoes) {
@@ -213,6 +224,9 @@ export class Garden {
     for (const pot of this.potatoes) pot.update(dt);
 
     // 승패 판정(에너지 단계 이후)
+    //  - 패배: 감자가 모두 파괴됨
+    //  - 승리①(grown): 남은 감자를 모두 100% 키움(수확 성공) — 즉시
+    //  - 승리②(survived): 60초 방어 카운트다운을 버텨냄(감자 생존)
     if (!this.ended && this.phase === "energy") {
       const anyAlive = this.potatoes.some((p) => p.alive);
       const anyGrowing = this.potatoes.some((p) => p.alive && !p.grown);
@@ -223,6 +237,12 @@ export class Garden {
       } else if (!anyGrowing) {
         this.ended = true;
         this.phase = "won";
+        this.winReason = "grown";
+        this.onWin();
+      } else if (this.missionElapsed >= this.survivalDuration) {
+        this.ended = true;
+        this.phase = "won";
+        this.winReason = "survived";
         this.onWin();
       }
     }
@@ -237,7 +257,9 @@ export class Garden {
     this.phase = "seed";
     this.phaseT = 0;
     this.advanceTimer = -1;
-    this.energyElapsed = 0;
+    this.missionElapsed = 0;
+    this.timerStarted = false;
     this.ended = false;
+    this.winReason = null;
   }
 }
