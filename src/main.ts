@@ -12,6 +12,7 @@ import { Garden } from "./game/Garden";
 import { GameHUD } from "./game/GameHUD";
 import { HarvestFx } from "./game/HarvestFx";
 import { Sound } from "./game/Sound";
+import { Screens } from "./game/Screens";
 import * as THREE from "three";
 
 // --- DOM 참조 ---
@@ -132,6 +133,7 @@ function aimFire(a: AimPoint, beam: Beam, origin: THREE.Vector3, dt: number): vo
 // 오른손 조준 위치가 있으면 그곳, 없으면 앞쪽에 순서대로 벌려 심는다.
 const _kbPlant = new THREE.Vector3();
 window.addEventListener("keydown", (e) => {
+  if (appState !== "playing") return;
   if (e.code !== "Space" || garden.phase !== "seed") return;
   e.preventDefault();
   if (aimRight.present && aimGround(aimRight, _kbPlant)) {
@@ -142,16 +144,23 @@ window.addEventListener("keydown", (e) => {
   }
 });
 
-// [D] 키: 손 뼈대 오버레이 토글 / [R] 키: 재시작
+// [D] 손 뼈대 토글 / [H] 도움말 열고닫기 / [Esc] 도움말 닫기 / [R] 재시작 (게임 중에만)
 window.addEventListener("keydown", (e) => {
+  if (appState !== "playing") return;
   sound.unlock(); // 첫 사용자 제스처에서 오디오 컨텍스트 준비
+  if (e.key === "Escape") {
+    setHelp(false);
+    return;
+  }
   const k = e.key.toLowerCase();
   if (k === "d") overlay.toggle();
+  else if (k === "h") setHelp(!helpOpen);
   else if (k === "r") restart();
 });
 
 /** 게임 전체 초기화(승리·패배 후 또는 언제든 [R]). */
 function restart(): void {
+  setHelp(false); // 도움말이 열려 있으면 닫고 재시작
   garden.reset();
   bugs.reset();
   gameHud.reset();
@@ -165,16 +174,55 @@ function restart(): void {
 // PIP 창은 웹캠 로드 후 크기가 확정되므로 오버레이 캔버스도 그때 맞춘다.
 window.addEventListener("resize", () => overlay.resize());
 
-async function boot(): Promise<void> {
+// --- 화면 상태(인트로 → 카메라 권한 → 게임) ---
+type AppState = "intro" | "camera" | "playing";
+let appState: AppState = "intro";
+let startingGame = false;
+
+const screens = new Screens({
+  onStart: () => screens.show("camera"), // START → 카메라 권한 안내 화면
+  onBack: () => screens.show("intro"),
+  onAllowCamera: () => void startGame(), // 카메라 권한 화면에서 실제 권한 요청 + 플레이 진입
+});
+screens.show("intro");
+
+// --- 게임 중 도움말(플레이 방법) 오버레이 ---
+// 옛 '플레이 방법' 텍스트 화면을 게임 도중 언제든 열어보는 창으로 재사용한다.
+// 열려 있는 동안 게임은 일시정지된다(아래 루프에서 플레이 갱신을 건너뜀).
+const helpScreen = document.getElementById("help-screen")!;
+let helpOpen = false;
+function setHelp(open: boolean): void {
+  helpOpen = open;
+  helpScreen.classList.toggle("visible", open);
+}
+document.getElementById("btn-help-open")!.addEventListener("click", () => setHelp(true));
+document.getElementById("btn-help-close")!.addEventListener("click", () => setHelp(false));
+
+/** "게임 시작"에서 웹캠+모델을 로드한 뒤 실제 플레이로 진입. */
+async function startGame(): Promise<void> {
+  if (startingGame || appState === "playing") return;
+  startingGame = true;
+  sound.unlock(); // 사용자 제스처(클릭) 시점에 오디오 컨텍스트 준비
+  screens.setBusy(true);
+  screens.setStatus("카메라 준비 중…", "loading");
   try {
     await tracker.startWebcam(); // 웹캠 권한 요청 + 스트림
     await tracker.loadModel(); // MediaPipe HandLandmarker 로드
     overlay.resize();
-    console.log("[화성 정원사] 웹캠 + 손 추적 준비 완료. 손을 화면에 비춰보세요.");
+    appState = "playing";
+    screens.setStatus("");
+    screens.show("playing");
+    console.log("[화성 정원사] 준비 완료. 손을 화면에 비춰보세요.");
   } catch (err) {
-    console.error("[화성 정원사] 초기화 실패:", err);
+    console.error("[화성 정원사] 카메라/모델 초기화 실패:", err);
+    screens.setStatus(
+      "카메라를 사용할 수 없습니다. 브라우저 권한을 허용한 뒤 다시 시도해 주세요.",
+      "error",
+    );
+    screens.setBusy(false);
+  } finally {
+    startingGame = false;
   }
-  requestAnimationFrame(loop);
 }
 
 let prev = performance.now();
@@ -184,6 +232,9 @@ function loop(now: number): void {
   const dt = Math.min(0.05, (now - prev) / 1000);
   prev = now;
 
+  // 게임 플레이 갱신은 실제 플레이 중이면서 도움말이 닫혀 있을 때만.
+  // (인트로/카메라/도움말 화면에서는 화성 씬만 배경으로 렌더되고 게임은 멈춘다.)
+  if (appState === "playing" && !helpOpen) {
   // 1) 손 감지 + 제스처 상태
   const frame = tracker.detect(now);
 
@@ -237,8 +288,9 @@ function loop(now: number): void {
   // 8) 수확 입자 연출 + 게임 HUD(목표·타이머·WAVE·에너지·성장 링·조작·결과).
   harvestFx.update(dt);
   gameHud.update(garden, bugs.count, energy);
+  }
 
-  // 화성 환경 애니메이션(먼지·모래 폭포·위성·스파크)
+  // 화성 환경 애니메이션(먼지·모래 폭포·위성·스파크) — 배경으로 항상 갱신
   mars.update(dt);
 
   // 렌더
@@ -252,7 +304,9 @@ pip.dataset.mode = "pip";
 
 // 개발 편의용 디버그 훅(프로덕션 번들에는 포함되지 않음).
 if (import.meta.env.DEV) {
-  (window as unknown as { __mars: unknown }).__mars = { mars, tracker, jets, beamRight, beamLeft, bugs, garden, gameHud, harvestFx, THREE };
+  (window as unknown as { __mars: unknown }).__mars = { mars, tracker, jets, beamRight, beamLeft, bugs, garden, gameHud, harvestFx, screens, THREE };
 }
 
-boot();
+// 렌더 루프는 즉시 시작(인트로 화면 뒤로 화성 씬이 바로 보인다).
+// 웹캠·손추적은 "게임 시작"을 눌러 startGame()에서 로드한다.
+requestAnimationFrame(loop);

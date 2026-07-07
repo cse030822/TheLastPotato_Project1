@@ -3,9 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>화성 정원사 · Terra-Garden (쏘는 동작까지)</title>
+    <title>화성 정원사 · The Last Potato</title>
   </head>
-  <body>
+  <body data-screen="intro">
     <!-- 3D 화성 공간이 렌더링되는 메인 캔버스 -->
     <canvas id="scene"></canvas>
 
@@ -76,8 +76,11 @@
       <div id="hand-strip">
         <span id="hand-left" class="hand-status">왼손: 미인식</span>
         <span id="hand-right" class="hand-status">오른손: 미인식</span>
-        <span class="hand-hint">[D] 뼈대 · [R] 재시작</span>
+        <span class="hand-hint">[D] 뼈대 · [H] 도움말 · [R] 재시작</span>
       </div>
+
+      <!-- 게임 중 언제든 도움말(플레이 방법) 열기 -->
+      <button id="btn-help-open" class="help-open-btn" type="button">❔ 도움말</button>
     </div>
 
     <!-- 승리/패배 결과 오버레이 -->
@@ -85,6 +88,75 @@
       <div id="result-card">
         <div id="result-title">수확 성공!</div>
         <div id="result-sub">[R] 다시 시작</div>
+      </div>
+    </div>
+
+    <!-- 인트로(타이틀) 화면: 제목이 포함된 아트워크 배경 + START 버튼 -->
+    <div id="intro-screen" class="screen intro-screen">
+      <div class="intro-stage">
+        <img class="intro-bg" src="/intro-bg.png" alt="THE LAST GARDNER" />
+        <!-- 제목 바로 아래 놓이는 START 버튼(이미지 아이콘). 클릭 시 다음 화면으로. -->
+        <button id="btn-start" class="btn-start" type="button" aria-label="게임 시작">
+          <img src="/start-button.png" alt="START" />
+        </button>
+        <div id="intro-status" class="screen-status"></div>
+      </div>
+    </div>
+
+    <!-- 게임 중 도움말 창(플레이 방법). [H] 키 또는 HUD의 '도움말' 버튼으로 언제든 열고 닫는다. -->
+    <div id="help-screen" class="screen">
+      <div class="screen-inner howto-inner">
+        <h2 class="howto-title">플레이 방법</h2>
+        <p class="howto-sub">잊었을 때 <b>[H]</b> 키로 언제든 열고 닫을 수 있어요.</p>
+        <div class="howto-grid">
+          <div class="howto-card">
+            <div class="howto-ico">🎯</div>
+            <div class="howto-h">목표</div>
+            <div class="howto-p">감자 3그루를 모두 100% 키우거나, 60초 방어를 버텨내면 승리!</div>
+          </div>
+          <div class="howto-card">
+            <div class="howto-ico">☝️</div>
+            <div class="howto-h">조준 · 발사</div>
+            <div class="howto-p">손가락 총 자세로 조준(GUN POSE), 검지를 당기면 발사(FIRE).</div>
+          </div>
+          <div class="howto-card">
+            <div class="howto-ico">💧</div>
+            <div class="howto-h">오른손 · 에너지</div>
+            <div class="howto-p">시안 빔으로 씨앗을 심고, 에너지를 쏴 감자를 키운다.</div>
+          </div>
+          <div class="howto-card">
+            <div class="howto-ico">🔥</div>
+            <div class="howto-h">왼손 · 방어</div>
+            <div class="howto-p">붉은 빔으로 몰려오는 외계 곤충을 격퇴한다.</div>
+          </div>
+          <div class="howto-card">
+            <div class="howto-ico">🥔</div>
+            <div class="howto-h">감자알</div>
+            <div class="howto-p">자랄수록 감자알이 돋는다. 빛나는 감자는 곤충에게서 보호된다.</div>
+          </div>
+          <div class="howto-card">
+            <div class="howto-ico">⌨️</div>
+            <div class="howto-h">키보드</div>
+            <div class="howto-p">[Space] 씨앗 심기 보조 · [D] 손 뼈대 · [H] 도움말 · [R] 재시작</div>
+          </div>
+        </div>
+        <div class="screen-buttons">
+          <button id="btn-help-close" class="btn btn-primary" type="button">닫고 계속하기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 카메라 권한 안내 화면: 안내 문구가 포함된 아트워크 배경 + 허용 버튼 -->
+    <div id="camera-screen" class="screen intro-screen">
+      <div class="intro-stage">
+        <img class="intro-bg" src="/camera-bg.png" alt="플레이 방법 · 카메라 권한 안내" />
+        <!-- 비어 있는 버튼 자리에 놓이는 카메라 허용 버튼. 클릭 시 권한 요청 후 게임 시작. -->
+        <button id="btn-allow" class="btn-allow" type="button">
+          <span class="btn-allow-ico">📷</span>
+          <span class="btn-allow-label">카메라 켜고 시작하기</span>
+        </button>
+        <button id="btn-cam-back" class="intro-howto intro-howto--left" type="button">‹ 뒤로</button>
+        <div id="camera-status" class="screen-status"></div>
       </div>
     </div>
 

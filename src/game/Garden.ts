@@ -116,15 +116,15 @@ export class Garden {
     pot.onTuberPop = (wp) => this.onHarvest?.(wp); // 감자알이 돋을 때 연출/사운드
     this.scene.add(pot.group);
     this.potatoes.push(pot);
-    this.timerStarted = true; // 첫 씨앗을 심는 순간부터 60초 카운트다운 시작
 
     // 테라건에서 씨앗이 날아와 심긴다(도착 시 씨감자 노출).
     const seedMat = new THREE.MeshStandardMaterial({ color: 0x9c7a4d, roughness: 0.9 });
     const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 10), seedMat);
     this.spawnProjectile(mesh, pot.position, 0, 0.55, 1.4, () => pot.plantSeed());
 
-    // 마지막 심기 후 잠시 뒤 자동 진행(3개 다 심으면 더 빨리). 1개만 심어도 막히지 않는다.
-    this.advanceTimer = this.potatoes.length >= this.maxPotatoes ? 1.5 : 3.5;
+    // 씨앗 3개를 모두 심어야 다음 단계(퇴비)로 진행한다. 그 전에는 자동 진행하지 않으므로
+    // 곤충도 오지 않고, 남은 자리를 천천히 다 심을 수 있다(손 제스처가 느려도 막히지 않음).
+    this.advanceTimer = this.potatoes.length >= this.maxPotatoes ? 1.5 : -1;
     return true;
   }
 
@@ -139,6 +139,7 @@ export class Garden {
   private toCompost(): void {
     this.phase = "compost";
     this.phaseT = 0;
+    this.timerStarted = true; // 곤충이 등장하는 이 순간부터 60초 방어 카운트다운 시작
     this.launchCompost();
   }
 
@@ -202,7 +203,7 @@ export class Garden {
       this.phaseT = 0;
     }
 
-    // 타이머는 첫 씨앗을 심은 순간부터(심기·퇴비·에너지 단계 관통) 게임 종료 전까지 흐른다.
+    // 타이머는 곤충이 등장하는 퇴비 단계부터(퇴비·에너지 관통) 게임 종료 전까지 흐른다.
     if (this.timerStarted && !this.ended) this.missionElapsed += dt;
 
     // 에너지 공급 판정: 감자별로 이번 프레임 발광 여부를 갱신
