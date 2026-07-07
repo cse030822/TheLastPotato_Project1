@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>화성 정원사 · Terra-Garden (쏘는 동작까지)</title>
+  </head>
+  <body>
+    <!-- 3D 화성 공간이 렌더링되는 메인 캔버스 -->
+    <canvas id="scene"></canvas>
+
+    <!-- 웹캠 + 손 뼈대 오버레이 (2단계: 전체화면 / 3단계 이후: 우하단 PIP) -->
+    <div id="cam-pip">
+      <video id="webcam" playsinline muted></video>
+      <canvas id="overlay"></canvas>
+    </div>
+
+    <!-- 손 조준점(크로스헤어): 오른손=시안 원, 왼손=붉은주황 십자 -->
+    <div id="crosshairs">
+      <div id="ch-left" class="crosshair ch-left"></div>
+      <div id="ch-right" class="crosshair ch-right"></div>
+    </div>
+
+    <!-- 상단/하단 HUD -->
+    <div id="hud">
+      <div id="hud-top">
+        <span id="hand-left" class="hand-status">왼손: 미인식</span>
+        <span id="hand-right" class="hand-status">오른손: 미인식</span>
+      </div>
+      <div id="hud-hint">
+        [D] 손 뼈대 표시 · 손가락 총 자세 → 발사 동작으로 조준/발사 연습
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

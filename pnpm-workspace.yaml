@@ -1,0 +1,4 @@
+# pnpm 11: 빌드 스크립트 허용 목록.
+# esbuild(vite 의존)의 네이티브 바이너리 설치를 허용한다.
+allowBuilds:
+  esbuild: true

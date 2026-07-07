@@ -1,0 +1,205 @@
+:root {
+  --hud-fg: #ffe9d6;
+  --hud-blue: #46c8ff;
+  --hud-red: #ff6a4d;
+  --hud-dim: rgba(255, 233, 214, 0.55);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #100604;
+  font-family: "Segoe UI", "Malgun Gothic", system-ui, sans-serif;
+  color: var(--hud-fg);
+  user-select: none;
+}
+
+/* 메인 3D 캔버스 */
+#scene {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  display: block;
+}
+
+/* 웹캠 컨테이너.
+   기본은 우하단 PIP(3단계 이후 상태). data-mode="full" 이면 전체화면(2단계). */
+#cam-pip {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  width: 320px;
+  height: 240px;
+  border: 2px solid rgba(255, 233, 214, 0.35);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.55);
+  transition: all 0.35s ease;
+  z-index: 5;
+  background: #000;
+}
+
+#cam-pip[data-mode="full"] {
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+#webcam,
+#overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* 거울 모드: 좌우 반전 */
+  transform: scaleX(-1);
+}
+
+/* 손 조준점(크로스헤어) */
+#crosshairs {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 8;
+}
+.crosshair {
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  transform: translate(-50%, -50%);
+  display: none;
+  opacity: 0.55;
+  transition: opacity 0.12s;
+}
+/* 오른손: 시안 원형 + 중앙 점 */
+.ch-right {
+  border: 3px solid var(--hud-blue);
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(70, 200, 255, 0.7);
+}
+.ch-right::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--hud-blue);
+  box-shadow: 0 0 8px var(--hud-blue);
+}
+/* 왼손: 붉은주황 십자(＋) */
+.ch-left::before,
+.ch-left::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  background: var(--hud-red);
+  box-shadow: 0 0 8px rgba(255, 106, 77, 0.8);
+}
+.ch-left::before {
+  width: 3px;
+  height: 100%;
+}
+.ch-left::after {
+  width: 100%;
+  height: 3px;
+}
+/* 상태별 연출: GUN POSE = 선명 + 천천히 회전, FIRE = 강한 깜빡임 */
+.crosshair[data-state="GUN_POSE"] {
+  opacity: 1;
+  animation: ch-spin 2.4s linear infinite;
+}
+.crosshair[data-state="FIRE"] {
+  opacity: 1;
+  animation: ch-fire 0.28s ease-in-out infinite;
+}
+@keyframes ch-spin {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+@keyframes ch-fire {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.35);
+  }
+}
+
+/* HUD */
+#hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+#hud-top {
+  position: absolute;
+  top: 16px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.hand-status {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(20, 8, 4, 0.55);
+  border: 1px solid rgba(255, 233, 214, 0.18);
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.hand-status[data-state="GUN_POSE"] {
+  border-color: rgba(255, 233, 214, 0.6);
+}
+.hand-status[data-state="FIRE"] {
+  background: rgba(60, 12, 4, 0.8);
+}
+
+#hand-left[data-state="FIRE"] {
+  color: var(--hud-red);
+  border-color: var(--hud-red);
+}
+#hand-right[data-state="FIRE"] {
+  color: var(--hud-blue);
+  border-color: var(--hud-blue);
+}
+
+#hud-hint {
+  position: absolute;
+  bottom: 14px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--hud-dim);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
