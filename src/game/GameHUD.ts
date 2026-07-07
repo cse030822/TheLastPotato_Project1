@@ -79,11 +79,11 @@ export class GameHUD {
     this.energyValEl.textContent = `${e}%`;
     this.energyFillEl.style.width = `${e}%`;
 
-    // 목표 진행: ① 모두 100% 성장 ② 60초 방어
+    // 목표 진행: ① 3개 모두 100% 성장(3개 전부 심고 살려야 완료) ② 60초 방어
     const grownCount = garden.potatoes.filter((p) => p.alive && p.grown).length;
-    const total = garden.potatoes.length || 3;
+    const total = garden.maxPotatoes;
     this.objGrowEl.textContent = `식물 ${total}개 모두 100% 성장 (${grownCount}/${total})`;
-    this.objGrowEl.classList.toggle("done", garden.potatoes.length > 0 && grownCount === total);
+    this.objGrowEl.classList.toggle("done", grownCount === total);
     this.objDefendEl.textContent = garden.elapsedSec > 0
       ? `60초 동안 방어 (${tl}초 남음)`
       : "60초 동안 외계 생명체로부터 방어";

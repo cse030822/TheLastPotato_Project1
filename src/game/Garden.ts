@@ -225,16 +225,18 @@ export class Garden {
 
     // 승패 판정(에너지 단계 이후)
     //  - 패배: 감자가 모두 파괴됨
-    //  - 승리①(grown): 남은 감자를 모두 100% 키움(수확 성공) — 즉시
+    //  - 승리①(grown): 씨앗 3개를 모두 심고, 3개 모두 살아서 100% 성장(수확 성공) — 즉시
     //  - 승리②(survived): 60초 방어 카운트다운을 버텨냄(감자 생존)
     if (!this.ended && this.phase === "energy") {
       const anyAlive = this.potatoes.some((p) => p.alive);
-      const anyGrowing = this.potatoes.some((p) => p.alive && !p.grown);
+      const allGrown =
+        this.potatoes.length === this.maxPotatoes &&
+        this.potatoes.every((p) => p.alive && p.grown);
       if (!anyAlive) {
         this.ended = true;
         this.phase = "lost";
         this.onLose();
-      } else if (!anyGrowing) {
+      } else if (allGrown) {
         this.ended = true;
         this.phase = "won";
         this.winReason = "grown";
