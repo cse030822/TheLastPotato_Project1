@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { Potato } from "./Potato";
+import { Potato, TUBERS_PER_PLANT } from "./Potato";
 import { terrainHeight } from "../mars/environment/heightfield";
 
 export type GardenPhase = "seed" | "compost" | "energy" | "won" | "lost";
@@ -39,8 +39,12 @@ export class Garden {
   private advanceTimer = -1; // 마지막으로 씨앗을 심은 뒤 이만큼 지나면 compost로 진행
   private readonly projectiles: Projectile[] = [];
   private readonly energizeRadius = 1.8;
-  private readonly growthRate = 0.11; // 초당 성장(약 9초에 완성)
+  private readonly growthRate = 0.05; // 초당 성장(약 20초에 완전 성숙 — 감자알을 모두 맺기까지)
   private ended = false;
+  private energyElapsed = 0; // 에너지 단계 진입 후 경과(초) — HUD 타이머용
+
+  /** 감자알이 새로 돋을 때(월드 좌표) 호출 — 수확 연출·사운드용. main이 주입. */
+  onHarvest: ((worldPos: THREE.Vector3) => void) | null = null;
 
   constructor(
     private readonly scene: THREE.Scene,
@@ -49,6 +53,23 @@ export class Garden {
     private readonly onLose: () => void,
   ) {
     // 감자는 플레이어가 씨앗을 쏴서 직접 배치한다(초기엔 아무것도 없음).
+  }
+
+  /** 에너지 단계 이후 경과 시간(초). HUD 타이머 표시용. */
+  get elapsedSec(): number {
+    return this.energyElapsed;
+  }
+
+  /** 지금까지 수확한 감자알 총합. */
+  get totalHarvest(): number {
+    let n = 0;
+    for (const p of this.potatoes) n += p.harvestCount;
+    return n;
+  }
+
+  /** 현재 심긴 감자 기준 최대 감자알 수. */
+  get maxHarvest(): number {
+    return this.potatoes.length * TUBERS_PER_PLANT;
   }
 
   /** 에너지 단계 진입 여부(= 감자 성장/에너지 공급이 가능한 시점). */
@@ -83,6 +104,7 @@ export class Garden {
     }
     const y = terrainHeight(pos.x, pos.z);
     const pot = new Potato(new THREE.Vector3(pos.x, y, pos.z));
+    pot.onTuberPop = (wp) => this.onHarvest?.(wp); // 감자알이 돋을 때 연출/사운드
     this.scene.add(pot.group);
     this.potatoes.push(pot);
 
@@ -170,6 +192,8 @@ export class Garden {
       this.phaseT = 0;
     }
 
+    if (this.phase === "energy") this.energyElapsed += dt;
+
     // 에너지 공급 판정: 감자별로 이번 프레임 발광 여부를 갱신
     for (const pot of this.potatoes) {
       pot.glowing = pot.grown; // 성숙한 감자는 상시 발광/보호
@@ -202,5 +226,18 @@ export class Garden {
         this.onWin();
       }
     }
+  }
+
+  /** 재시작: 감자·발사체를 모두 치우고 씨앗 단계로 되돌린다(배열은 제자리에서 비운다). */
+  reset(): void {
+    for (const pot of this.potatoes) this.scene.remove(pot.group);
+    this.potatoes.length = 0; // BugManager가 같은 배열을 참조하므로 재할당 대신 비운다.
+    for (const p of this.projectiles) this.scene.remove(p.mesh);
+    this.projectiles.length = 0;
+    this.phase = "seed";
+    this.phaseT = 0;
+    this.advanceTimer = -1;
+    this.energyElapsed = 0;
+    this.ended = false;
   }
 }

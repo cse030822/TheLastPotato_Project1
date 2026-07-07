@@ -155,35 +155,236 @@ body {
   z-index: 10;
 }
 
-#hud-top {
+/* 공통 HUD 패널(반투명 다크 카드) */
+.hud-panel {
   position: absolute;
-  top: 16px;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: center;
-  gap: 28px;
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
+  background: rgba(16, 8, 6, 0.62);
+  border: 1px solid rgba(255, 233, 214, 0.16);
+  border-radius: 14px;
+  padding: 13px 18px;
+  backdrop-filter: blur(3px);
+  box-shadow: 0 6px 26px rgba(0, 0, 0, 0.5);
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
 }
 
+/* --- 목표(좌상단) --- */
+#objective {
+  top: 20px;
+  left: 20px;
+  max-width: 340px;
+}
+.obj-title {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #7dff92;
+  text-shadow: 0 0 12px rgba(91, 255, 122, 0.5);
+  margin-bottom: 7px;
+}
+.obj-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.obj-list li {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--hud-fg);
+  padding-left: 16px;
+  position: relative;
+}
+.obj-list li::before {
+  content: "›";
+  position: absolute;
+  left: 2px;
+  color: rgba(125, 255, 146, 0.8);
+}
+.obj-list li.done {
+  color: rgba(125, 255, 146, 0.9);
+  text-decoration: line-through;
+  text-decoration-color: rgba(125, 255, 146, 0.5);
+}
+
+/* --- 타이머(중앙 상단) --- */
+#timer-pill {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 24px;
+  border-radius: 999px;
+  background: rgba(14, 8, 6, 0.7);
+  border: 2px solid rgba(91, 255, 122, 0.55);
+  box-shadow: 0 0 22px rgba(91, 255, 122, 0.28), inset 0 0 12px rgba(91, 255, 122, 0.12);
+  backdrop-filter: blur(3px);
+}
+.tp-icon {
+  font-size: 22px;
+  color: #7dff92;
+  line-height: 1;
+}
+#timer-val {
+  font-size: 28px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.85);
+}
+
+/* --- WAVE + 남은 적(우상단) --- */
+#wave-panel {
+  top: 20px;
+  right: 20px;
+  min-width: 150px;
+}
+.wave-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.wave-key {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #7dff92;
+  text-shadow: 0 0 12px rgba(91, 255, 122, 0.45);
+}
+.wave-val {
+  font-size: 24px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.enemy-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 233, 214, 0.14);
+}
+.enemy-key {
+  font-size: 12px;
+  color: var(--hud-dim);
+  flex: 1;
+}
+.enemy-ico {
+  font-size: 15px;
+  filter: hue-rotate(-15deg) saturate(1.2);
+}
+.enemy-val {
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--hud-red);
+  min-width: 22px;
+  text-align: right;
+}
+
+/* --- 에너지(좌하단) --- */
+#energy-panel {
+  left: 20px;
+  bottom: 20px;
+  width: 210px;
+}
+.ep-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 2px;
+}
+.ep-drop {
+  font-size: 17px;
+  filter: drop-shadow(0 0 6px rgba(70, 200, 255, 0.7));
+}
+.ep-key {
+  font-size: 13px;
+  color: var(--hud-dim);
+  letter-spacing: 0.5px;
+}
+.ep-val {
+  font-size: 30px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--hud-blue);
+  text-shadow: 0 0 14px rgba(70, 200, 255, 0.5);
+  line-height: 1.1;
+}
+.ep-bar {
+  margin-top: 8px;
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(6, 12, 18, 0.8);
+  border: 1px solid rgba(70, 200, 255, 0.28);
+  overflow: hidden;
+}
+.ep-fill {
+  height: 100%;
+  width: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #1e6fa8, #46c8ff);
+  box-shadow: 0 0 10px rgba(70, 200, 255, 0.7);
+  transition: width 0.15s ease;
+}
+
+/* --- 조작 방법(우하단) --- */
+#controls-panel {
+  right: 20px;
+  bottom: 20px;
+  max-width: 260px;
+}
+.cp-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #7dff92;
+  letter-spacing: 0.5px;
+  margin-bottom: 7px;
+}
+.cp-body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cp-hand {
+  font-size: 24px;
+  filter: drop-shadow(0 0 6px rgba(70, 200, 255, 0.6));
+}
+#controls-text {
+  font-size: 13px;
+  color: var(--hud-fg);
+  line-height: 1.35;
+}
+
+/* --- 손 인식 상태(하단 중앙, 보조) --- */
+#hand-strip {
+  position: absolute;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
 .hand-status {
-  padding: 6px 14px;
+  padding: 5px 12px;
   border-radius: 999px;
   background: rgba(20, 8, 4, 0.55);
   border: 1px solid rgba(255, 233, 214, 0.18);
   transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
-
 .hand-status[data-state="GUN_POSE"] {
   border-color: rgba(255, 233, 214, 0.6);
 }
 .hand-status[data-state="FIRE"] {
   background: rgba(60, 12, 4, 0.8);
 }
-
 #hand-left[data-state="FIRE"] {
   color: var(--hud-red);
   border-color: var(--hud-red);
@@ -192,14 +393,117 @@ body {
   color: var(--hud-blue);
   border-color: var(--hud-blue);
 }
-
-#hud-hint {
-  position: absolute;
-  bottom: 14px;
-  left: 0;
-  right: 0;
-  text-align: center;
-  font-size: 13px;
+.hand-hint {
+  font-size: 11px;
   color: var(--hud-dim);
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+  font-weight: 400;
+}
+
+/* --- 감자별 성장 게이지(원형 링, 월드 위에 떠 있음) --- */
+#potato-gauges {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9;
+}
+.potato-gauge {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  display: none;
+  width: 58px;
+  height: 58px;
+}
+.pg-ring {
+  width: 58px;
+  height: 58px;
+  display: block;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6));
+}
+.pg-track {
+  fill: rgba(12, 6, 4, 0.65);
+  stroke: rgba(255, 233, 214, 0.18);
+  stroke-width: 3.5;
+}
+.pg-prog {
+  fill: none;
+  stroke: #5bff7a;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  filter: drop-shadow(0 0 4px rgba(91, 255, 122, 0.8));
+  transition: stroke-dashoffset 0.2s ease;
+}
+.pg-pct {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--hud-fg);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+}
+.potato-gauge.done .pg-pct {
+  color: #7dff92;
+  text-shadow: 0 0 10px rgba(91, 255, 122, 0.8);
+}
+.potato-gauge.done .pg-track {
+  stroke: rgba(91, 255, 122, 0.4);
+}
+
+/* --- 승리/패배 결과 오버레이 --- */
+#result-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.5s ease, visibility 0.5s;
+  background: radial-gradient(ellipse at center, rgba(10, 4, 2, 0.35), rgba(10, 4, 2, 0.75));
+}
+#result-overlay.visible {
+  opacity: 1;
+  visibility: visible;
+}
+#result-card {
+  text-align: center;
+  padding: 34px 54px;
+  border-radius: 18px;
+  background: rgba(18, 8, 5, 0.72);
+  border: 1px solid rgba(255, 233, 214, 0.2);
+  box-shadow: 0 12px 60px rgba(0, 0, 0, 0.7);
+  transform: translateY(12px);
+  transition: transform 0.5s ease;
+}
+#result-overlay.visible #result-card {
+  transform: translateY(0);
+}
+#result-title {
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+#result-sub {
+  margin-top: 12px;
+  font-size: 15px;
+  color: var(--hud-dim);
+}
+/* 승리 = 생명빛 그린, 패배 = 붉은 톤(아트 디렉션 대비) */
+#result-overlay[data-kind="won"] #result-title {
+  color: #7dff92;
+  text-shadow: 0 0 26px rgba(91, 255, 122, 0.6);
+}
+#result-overlay[data-kind="won"] #result-card {
+  border-color: rgba(91, 255, 122, 0.45);
+}
+#result-overlay[data-kind="lost"] #result-title {
+  color: var(--hud-red);
+  text-shadow: 0 0 26px rgba(255, 106, 77, 0.5);
 }

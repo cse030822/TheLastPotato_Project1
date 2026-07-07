@@ -38,6 +38,16 @@ export class BugManager {
     this.enabled = v;
   }
 
+  /** 재시작: 곤충을 모두 치우고 초기 상태로 되돌린다. */
+  reset(): void {
+    for (const b of this.bugs) this.scene.remove(b.group);
+    this.bugs = [];
+    this.elapsed = 0;
+    this.spawnTimer = 1.0;
+    this.failed = false;
+    this.enabled = false;
+  }
+
   get count(): number {
     return this.bugs.length;
   }

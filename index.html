@@ -21,14 +21,70 @@
       <div id="ch-right" class="crosshair ch-right"></div>
     </div>
 
-    <!-- 상단/하단 HUD -->
+    <!-- 감자별 성장 게이지(원형 링) — 월드→화면 투영으로 각 감자 위에 떠 있음 -->
+    <div id="potato-gauges"></div>
+
     <div id="hud">
-      <div id="hud-top">
+      <!-- 목표(좌상단) -->
+      <div id="objective" class="hud-panel">
+        <div class="obj-title">목표</div>
+        <ul class="obj-list">
+          <li id="obj-grow">식물 3개 모두 100% 성장</li>
+          <li>외계 생명체로부터 감자밭 방어</li>
+        </ul>
+      </div>
+
+      <!-- 타이머(중앙 상단) -->
+      <div id="timer-pill">
+        <span class="tp-icon">◷</span>
+        <span id="timer-val">00:00</span>
+      </div>
+
+      <!-- WAVE + 남은 적(우상단) -->
+      <div id="wave-panel" class="hud-panel">
+        <div class="wave-row">
+          <span class="wave-key">WAVE</span>
+          <span id="wave-val" class="wave-val">1 / 8</span>
+        </div>
+        <div class="enemy-row">
+          <span class="enemy-key">남은 적</span>
+          <span class="enemy-ico">🕷</span>
+          <span id="enemy-val" class="enemy-val">0</span>
+        </div>
+      </div>
+
+      <!-- 에너지(좌하단) -->
+      <div id="energy-panel" class="hud-panel">
+        <div class="ep-head">
+          <span class="ep-drop">💧</span>
+          <span class="ep-key">에너지</span>
+        </div>
+        <div id="energy-val" class="ep-val">100%</div>
+        <div class="ep-bar"><div id="energy-fill" class="ep-fill"></div></div>
+      </div>
+
+      <!-- 조작 방법(우하단) -->
+      <div id="controls-panel" class="hud-panel">
+        <div class="cp-title">조작 방법</div>
+        <div class="cp-body">
+          <span class="cp-hand">☝</span>
+          <span id="controls-text">손가락 총 자세로 조준 → 트리거를 당겨 발사!</span>
+        </div>
+      </div>
+
+      <!-- 손 인식 상태(하단 중앙, 보조) -->
+      <div id="hand-strip">
         <span id="hand-left" class="hand-status">왼손: 미인식</span>
         <span id="hand-right" class="hand-status">오른손: 미인식</span>
+        <span class="hand-hint">[D] 뼈대 · [R] 재시작</span>
       </div>
-      <div id="hud-hint">
-        [D] 손 뼈대 표시 · 손가락 총 자세 → 발사 동작으로 조준/발사 연습
+    </div>
+
+    <!-- 승리/패배 결과 오버레이 -->
+    <div id="result-overlay">
+      <div id="result-card">
+        <div id="result-title">수확 성공!</div>
+        <div id="result-sub">[R] 다시 시작</div>
       </div>
     </div>
 

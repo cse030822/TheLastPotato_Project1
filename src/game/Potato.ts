@@ -1,12 +1,16 @@
 import * as THREE from "three";
 
+/** 한 그루에 맺히는 감자알(덩이) 최대 개수. */
+export const TUBERS_PER_PLANT = 5;
+
 /**
  * 감자(라스트 포테이토) 한 그루.
- *  - 씨감자(seed) → 성장(growth 0~1)으로 잎/줄기가 자라며 커진다.
+ *  - 씨감자(seed) → 성장(growth 0~1)으로 줄기·잎이 길게 자란다.
+ *  - 성장 후반부(≈50% 이후)부터 두둑 둘레로 **감자알**이 하나씩 돋아난다.
+ *  - 감자알이 모두(5개) 돋으면 성숙(grown) — 수확 완료로 승리에 기여.
  *  - 에너지를 받는 동안(glowing) 초록빛을 강하게 내고, 그 동안 곤충이 접근하지 못한다.
- *  - 다 자라면(growth>=1) 성숙 상태로 항상 은은히 빛나며 보호된다.
+ *  - 다 자라면 성숙 상태로 항상 은은히 빛나며 보호된다.
  *  - 곤충이 닿으면(비보호 상태) health가 깎이고, 0이면 파괴.
- * 크기는 이전보다 크게 키웠다.
  */
 export class Potato {
   readonly group = new THREE.Group();
@@ -19,12 +23,27 @@ export class Potato {
   glowing = false; // 이번 프레임 에너지를 받는 중(보호막)
   readonly protectRadius = 2.2; // 빛날 때 곤충 접근 차단 반경
 
-  private tuber: THREE.Mesh;
+  /** 감자알이 새로 돋을 때(월드 좌표) 호출 — 수확 연출·사운드용. Garden이 주입. */
+  onTuberPop: ((worldPos: THREE.Vector3) => void) | null = null;
+
+  private tuber: THREE.Mesh; // 씨감자(중앙, 흙 속)
   private foliage = new THREE.Group();
   private leafMat: THREE.MeshStandardMaterial;
   private moundMat: THREE.MeshStandardMaterial;
   private glowLight: THREE.PointLight;
   private glow = 0; // 현재 발광(보간)
+
+  // --- 감자알(덩이) ---
+  private tubers: THREE.Mesh[] = [];
+  private tuberMat: THREE.MeshStandardMaterial;
+  private tuberPop: number[] = []; // 각 감자알의 팝 진행(0=숨김 → 1=완전히 돋음)
+  private tuberSpawned: boolean[] = []; // 팝 시작(콜백 1회) 여부
+  // 각 감자알이 돋기 시작하는 성장 임계값(50% → 100%에 고르게 분포).
+  private readonly tuberThreshold: number[] = Array.from(
+    { length: TUBERS_PER_PLANT },
+    (_, i) => 0.5 + (i * 0.5) / TUBERS_PER_PLANT,
+  );
+  private readonly _wp = new THREE.Vector3();
 
   constructor(pos: THREE.Vector3) {
     this.position = pos.clone();
@@ -74,9 +93,39 @@ export class Potato {
       leaf.castShadow = true;
       this.foliage.add(leaf);
     }
+    // 꼭대기 새순(성장 신호) — 다 자라면 감자꽃처럼 살짝 밝게.
+    const bud = new THREE.Mesh(
+      new THREE.ConeGeometry(0.1, 0.3, 6),
+      this.leafMat,
+    );
+    bud.position.y = 0.92;
+    this.foliage.add(bud);
     this.foliage.position.y = 0.2;
     this.foliage.visible = false;
     this.group.add(this.foliage);
+
+    // --- 감자알(덩이): 두둑 둘레에 반쯤 파묻힌 채 돋아난다 ---
+    this.tuberMat = new THREE.MeshStandardMaterial({
+      color: 0xcaa066,
+      emissive: 0x2e5a1c,
+      emissiveIntensity: 0.0,
+      roughness: 0.9,
+    });
+    const tuberGeo = new THREE.SphereGeometry(0.17, 14, 12);
+    for (let i = 0; i < TUBERS_PER_PLANT; i++) {
+      const t = new THREE.Mesh(tuberGeo, this.tuberMat);
+      const a = (i / TUBERS_PER_PLANT) * Math.PI * 2 + 0.4;
+      const r = 0.5;
+      t.position.set(Math.cos(a) * r, 0.06, Math.sin(a) * r);
+      t.scale.set(1.15, 0.85, 0.95);
+      t.rotation.y = a;
+      t.castShadow = true;
+      t.visible = false;
+      this.group.add(t);
+      this.tubers.push(t);
+      this.tuberPop.push(0);
+      this.tuberSpawned.push(false);
+    }
 
     // --- 생명 발광(초록 포인트 라이트) ---
     this.glowLight = new THREE.PointLight(0x5bff7a, 0, 4.5, 2);
@@ -95,7 +144,14 @@ export class Potato {
     this.moundMat.color.set(0x2c1c0e);
   }
 
-  /** 완전 성장 여부. */
+  /** 현재까지 돋아난 감자알 수(수확 카운트). */
+  get harvestCount(): number {
+    let n = 0;
+    for (const s of this.tuberSpawned) if (s) n++;
+    return n;
+  }
+
+  /** 완전 성장(감자알을 모두 맺음) 여부. */
   get grown(): boolean {
     return this.growth >= 1;
   }
@@ -109,16 +165,60 @@ export class Potato {
   update(dt: number): void {
     if (!this.alive) return;
 
-    // 성장 시각화
+    // 성장 시각화(줄기·잎이 위로 길게 자람)
     const g = this.growth;
     this.foliage.visible = g > 0.02;
-    this.foliage.scale.setScalar(0.2 + g * 1.4); // 작게 시작 → 크게
+    // 세로로 더 길게 뻗도록 Y를 크게, 옆폭은 완만하게.
+    const spread = 0.2 + g * 1.35;
+    this.foliage.scale.set(spread, 0.2 + g * 1.9, spread);
     this.tuber.scale.set(1.25 + g * 0.5, 0.9 + g * 0.4, 1.05 + g * 0.4);
+
+    // 감자알: 임계값을 넘으면 하나씩 팝(0→1 이징). 팝 시작 시 콜백 1회.
+    for (let i = 0; i < this.tubers.length; i++) {
+      if (g >= this.tuberThreshold[i]) {
+        if (!this.tuberSpawned[i]) {
+          this.tuberSpawned[i] = true;
+          this.tubers[i].getWorldPosition(this._wp);
+          this.onTuberPop?.(this._wp.clone());
+        }
+        // 팝 진행: 약 0.7초에 완전히 돋음.
+        this.tuberPop[i] = Math.min(1, this.tuberPop[i] + dt / 0.7);
+      }
+      const p = this.tuberPop[i];
+      const t = this.tubers[i];
+      t.visible = p > 0.001;
+      // 살짝 튀어오르는 오버슈트(1.15 → 1.0).
+      const s = p < 0.7 ? (p / 0.7) * 1.15 : 1.15 - ((p - 0.7) / 0.3) * 0.15;
+      t.scale.set(1.15 * s, 0.85 * s, 0.95 * s);
+      // 흙에서 살짝 솟아오름.
+      t.position.y = 0.02 + p * 0.06;
+    }
 
     // 발광: 에너지 받는 중이면 강하게, 다 자랐으면 은은히 상시.
     const target = this.glowing ? 1 : this.grown ? 0.35 : 0;
     this.glow += (target - this.glow) * Math.min(1, dt * 6);
     this.glowLight.intensity = this.glow * 3.2;
     this.leafMat.emissiveIntensity = 0.2 + this.glow * 2.2;
+    // 감자알도 생명빛을 머금음(수확할수록 은은한 초록).
+    this.tuberMat.emissiveIntensity = 0.15 + this.glow * 0.9;
+  }
+
+  /** 재시작: 완전히 심기 전(seed) 상태로 되돌린다. */
+  reset(): void {
+    this.alive = true;
+    this.health = 100;
+    this.growth = 0;
+    this.planted = false;
+    this.glowing = false;
+    this.glow = 0;
+    this.tuber.visible = false;
+    this.foliage.visible = false;
+    this.moundMat.color.set(0x4a3220);
+    for (let i = 0; i < this.tubers.length; i++) {
+      this.tuberPop[i] = 0;
+      this.tuberSpawned[i] = false;
+      this.tubers[i].visible = false;
+    }
+    this.group.visible = true;
   }
 }
