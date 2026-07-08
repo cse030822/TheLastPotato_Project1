@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { Sky } from "./Sky";
 import { createTerrain } from "./Terrain";
 import { createRocks, createNearRocks, createGravel } from "./Rocks";
-import { createPlants } from "./Plants";
+import { createPlants, createGreenPlants } from "./Plants";
 import { createCrackedFloor } from "./Floor";
 import { EdenDome } from "./EdenDome";
 import { DustField } from "./DustField";
@@ -47,6 +47,7 @@ export class MarsEnvironment {
     this.group.add(createNearRocks());
     this.group.add(createGravel());
     this.group.add(createPlants());
+    this.group.add(createGreenPlants());
     this.group.add(createCrackedFloor());
 
     // --- 무너진 에덴 돔 + 소품 + God Ray + 모래 폭포 ---

@@ -25,18 +25,31 @@ export function makeSoilAlbedo(size = 1024): THREE.CanvasTexture {
   const scale = 6 / size;
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      const n = fbm(x * scale, y * scale, 6, 11); // 0~1 큰 얼룩
+      const n = fbm(x * scale, y * scale, 6, 11); // 0~1 큰/중 얼룩
       const grain = (fbm(x * scale * 8, y * scale * 8, 3, 27) - 0.5) * 0.24; // ±0.12 잔알갱이
-      // 큰 얼룩(저주파)의 진폭을 절반으로 줄여 타일 반복이 눈에 덜 띄게 한다.
-      // 지면의 큰 색 변화(원근 톤)는 Terrain의 정점색이 담당하므로 알베도는 잔결 위주.
-      const t = THREE.MathUtils.clamp(0.5 + (n - 0.5) * 0.5 + grain, 0, 1);
-      const r = 74 + t * 150;
-      const g = 30 + t * 66;
-      const b = 18 + t * 34;
+      // 미러랩이 이음새를 잡아주므로 저주파 대비를 어느 정도 살려(0.8) "융털감"을 깬다.
+      const t = THREE.MathUtils.clamp(0.5 + (n - 0.5) * 0.8 + grain, 0, 1);
+      // 진한 핏빛 대신 밝은 먼지빛 황토-오렌지(더 옅고 채도 낮게 — 물체 구분이 쉽게).
+      let r = 120 + t * 120; // 120~240
+      let g = 72 + t * 82; //  72~154
+      let b = 52 + t * 54; //  52~106
+      // 드문 잔돌 스펙클: 밝은 돌 알갱이 / 어두운 그늘돌을 성기게 박아 균일함을 깬다.
+      const speck = fbm(x * scale * 22, y * scale * 22, 1, 91);
+      if (speck > 0.8) {
+        const k = (speck - 0.8) / 0.2; // 밝은 잔돌
+        r += 40 * k;
+        g += 28 * k;
+        b += 20 * k;
+      } else if (speck < 0.16) {
+        const d = 1 - 0.28 * ((0.16 - speck) / 0.16); // 어두운 돌·그늘(약하게)
+        r *= d;
+        g *= d;
+        b *= d;
+      }
       const i = (y * size + x) * 4;
-      img.data[i] = r;
-      img.data[i + 1] = g;
-      img.data[i + 2] = b;
+      img.data[i] = Math.min(255, r);
+      img.data[i + 1] = Math.min(255, g);
+      img.data[i + 2] = Math.min(255, b);
       img.data[i + 3] = 255;
     }
   }
@@ -56,7 +69,9 @@ export function makeSoilRoughness(size = 512): THREE.CanvasTexture {
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const n = fbm(x * scale, y * scale, 5, 41); // 0~1
-      const v = Math.floor(180 + n * 70);
+      const fine = (fbm(x * scale * 4, y * scale * 4, 2, 53) - 0.5) * 0.25; // 잔결 편차
+      const rr = THREE.MathUtils.clamp(n + fine, 0, 1);
+      const v = Math.floor(150 + rr * 95); // 0.59~0.96: 무광~살짝 젖은 반사 편차 확대
       const i = (y * size + x) * 4;
       img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
       img.data[i + 3] = 255;

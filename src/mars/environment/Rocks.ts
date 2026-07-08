@@ -108,7 +108,7 @@ export function createNearRocks(count = 12): THREE.Group {
  * 근경 자갈(gravel). 화단 주변에 작은 다면체 돌멩이를 흩뿌려 지면 디테일을 채운다.
  * 스펙: DodecahedronGeometry radius 0.1~0.5, 색 #6B2E0A~#4A1F05, roughness 1.0.
  */
-export function createGravel(count = 44): THREE.Group {
+export function createGravel(count = 90): THREE.Group {
   const group = new THREE.Group();
   const rng = makeRng(90210);
 

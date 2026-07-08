@@ -63,7 +63,7 @@ export class Potato {
     // --- 씨감자 덩이(흙에 절반쯤 박힘) ---
     this.tuber = new THREE.Mesh(
       new THREE.SphereGeometry(0.28, 18, 14),
-      new THREE.MeshStandardMaterial({ color: 0x9c7a4d, roughness: 0.95 }),
+      new THREE.MeshStandardMaterial({ color: 0xc8a550, roughness: 0.95 }),
     );
     this.tuber.scale.set(1.25, 0.9, 1.05);
     this.tuber.position.y = 0.16;
@@ -106,7 +106,7 @@ export class Potato {
 
     // --- 감자알(덩이): 두둑 둘레에 반쯤 파묻힌 채 돋아난다 ---
     this.tuberMat = new THREE.MeshStandardMaterial({
-      color: 0xcaa066,
+      color: 0xd8b45c,
       emissive: 0x2e5a1c,
       emissiveIntensity: 0.0,
       roughness: 0.9,

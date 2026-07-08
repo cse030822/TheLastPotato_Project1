@@ -43,7 +43,7 @@ export function createTerrain(): THREE.Mesh {
     const grain = 0.85 + fbm(x * 0.9, z * 0.9, 2, 3) * 0.3;
     // 실사 알베도 텍스처가 색을 주도하도록, 높이 기반 색은 흰색 쪽으로 당겨
     // "은은한 원근 톤(먼 언덕은 밝게, 골은 어둡게)"만 남긴다(과한 이중 어두워짐 방지).
-    tmp.multiplyScalar(grain).lerp(WHITE, 0.5);
+    tmp.multiplyScalar(grain).lerp(WHITE, 0.62);
     colors.push(tmp.r, tmp.g, tmp.b);
   }
 
@@ -66,7 +66,7 @@ export function createTerrain(): THREE.Mesh {
     vertexColors: true, // 위에서 옅게 만든 높이 기반 원근 톤
     map: albedo,
     normalMap: normal,
-    normalScale: new THREE.Vector2(1.1, 1.1),
+    normalScale: new THREE.Vector2(1.6, 1.6),
     roughnessMap: rough,
     roughness: 1,
     metalness: 0,
