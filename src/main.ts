@@ -69,6 +69,8 @@ const gameHud = new GameHUD(mars.camera);
 // 게임 중 이벤트 이팩트(곤충 출현·시간 기점·완전 성장). 게임을 멈추지 않는 연출.
 const eventFx = new EventFx();
 // 각 이팩트를 한 번씩만 띄우기 위한 플래그(재시작 시 초기화).
+let fxSeed = false;
+let fxCompost = false;
 let fxFirstBug = false;
 let fx30 = false;
 let fx10 = false;
@@ -175,7 +177,7 @@ function restart(): void {
   gameHud.reset();
   harvestFx.clear();
   eventFx.reset();
-  fxFirstBug = fx30 = fx10 = fxGrown = false;
+  fxSeed = fxCompost = fxFirstBug = fx30 = fx10 = fxGrown = false;
   energy = 100;
   aimLeft.present = false;
   aimRight.present = false;
@@ -300,8 +302,16 @@ function loop(now: number): void {
   harvestFx.update(dt);
   gameHud.update(garden, bugs.count, energy);
 
-  // 9) 이벤트 이팩트(각각 한 번씩): 곤충 첫 등장 · 30초/10초 기점 · 첫 완전 성장.
+  // 9) 이벤트 이팩트(각각 한 번씩): 씨앗 발사 · 퇴비 공급 · 곤충 첫 등장 · 30초/10초 기점 · 첫 완전 성장.
   //    이미지는 play({..., image: "/파일.png"})로 넣으면 이팩트 중앙에 크게 박힌다.
+  if (!fxSeed && garden.phase === "seed") {
+    fxSeed = true;
+    eventFx.play({ tone: "life", title: "감자를 발사하라!", sub: "오른손 트리거로 씨앗을 심어라" });
+  }
+  if (!fxCompost && garden.phase === "compost") {
+    fxCompost = true;
+    eventFx.play({ tone: "warn", title: "퇴비를 뿌려라!", sub: "감자밭에 영양을 공급한다" });
+  }
   if (!fxFirstBug && garden.threatsActive && bugs.count > 0) {
     fxFirstBug = true;
     eventFx.play({ tone: "danger", title: "외계 곤충 출현!", sub: "왼손 붉은 에너지로 격퇴하라!" });

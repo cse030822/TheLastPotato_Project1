@@ -539,8 +539,10 @@ body {
   0% { opacity: 0; transform: scale(1.7); filter: blur(14px); }
   7% { opacity: 1; transform: scale(0.97); filter: blur(0); }
   12% { transform: scale(1); }
-  78% { opacity: 1; transform: scale(1) translateY(0); }
-  100% { opacity: 0; transform: scale(1.06) translateY(-24px); filter: blur(2px); }
+  /* 78%까지 blur 0으로 고정 → 보이는 동안은 계속 또렷하게. */
+  78% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+  /* 사라지면서(78%→100%)만 흐려진다. */
+  100% { opacity: 0; transform: scale(1.06) translateY(-24px); filter: blur(8px); }
 }
 
 /* 플레이어가 준 이미지: 이팩트 중앙에 크게 박힌다. */
