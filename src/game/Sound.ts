@@ -10,6 +10,14 @@ export class Sound {
   // 우주 앰비언스(지속 재생) 핸들 — 중복 시작 방지 + 페이드아웃 정지용.
   private ambience: { stop: () => void } | null = null;
 
+  // --- 배경음악(mp3 파일) ---
+  // menu: 인트로·카메라 화면(후보 2), game: 플레이 화면(후보 1). 화면 전환 때 크로스페이드.
+  private menuAudio: HTMLAudioElement | null = null;
+  private gameAudio: HTMLAudioElement | null = null;
+  private currentMusic: "menu" | "game" | null = null;
+  private readonly musicVol = 0.55; // 배경음악 최대 음량(효과음보다 은은하게)
+  private fadeTimers = new WeakMap<HTMLAudioElement, number>();
+
   /** 첫 사용자 제스처(키 입력·발사 등)에서 호출 — 오디오 컨텍스트 준비/재개. */
   unlock(): void {
     if (!this.ctx) {
@@ -23,6 +31,77 @@ export class Sound {
       this.master.connect(this.ctx.destination);
     }
     if (this.ctx.state === "suspended") void this.ctx.resume();
+    // 자동재생 정책으로 막혀 있던 배경음악을 이 사용자 제스처에서 재개.
+    if (this.currentMusic) {
+      const a = this.currentMusic === "menu" ? this.menuAudio : this.gameAudio;
+      if (a && a.paused) void a.play().catch(() => {});
+    }
+  }
+
+  /** 배경음악 엘리먼트 준비(최초 1회). public/ 파일이라 사이트 루트에서 서빙된다. */
+  private ensureMusic(): void {
+    if (!this.menuAudio) {
+      this.menuAudio = new Audio(encodeURI("/후보 2.mp3"));
+      this.menuAudio.loop = true;
+      this.menuAudio.volume = 0;
+      this.menuAudio.preload = "auto";
+    }
+    if (!this.gameAudio) {
+      this.gameAudio = new Audio(encodeURI("/후보 1.mp3"));
+      this.gameAudio.loop = true;
+      this.gameAudio.volume = 0;
+      this.gameAudio.preload = "auto";
+    }
+  }
+
+  /** 지정 오디오의 음량을 to까지 ms 동안 선형 페이드(끝나면 0이면 정지 선택). */
+  private fadeTo(a: HTMLAudioElement, to: number, ms: number, pauseAtEnd: boolean): void {
+    const prev = this.fadeTimers.get(a);
+    if (prev) clearInterval(prev);
+    const from = a.volume;
+    const steps = Math.max(1, Math.round(ms / 40));
+    let i = 0;
+    const id = window.setInterval(() => {
+      i++;
+      a.volume = Math.max(0, Math.min(1, from + (to - from) * (i / steps)));
+      if (i >= steps) {
+        clearInterval(id);
+        this.fadeTimers.delete(a);
+        if (pauseAtEnd && to === 0) a.pause();
+      }
+    }, 40);
+    this.fadeTimers.set(a, id);
+  }
+
+  /** 배경음악 전환(menu/game/null). 현재 곡은 페이드아웃, 새 곡은 페이드인. */
+  private switchMusic(which: "menu" | "game" | null): void {
+    this.ensureMusic();
+    if (this.currentMusic === which) return;
+    this.currentMusic = which;
+    const target = which === "menu" ? this.menuAudio : which === "game" ? this.gameAudio : null;
+    // 대상이 아닌 곡은 모두 페이드아웃 후 정지.
+    for (const a of [this.menuAudio, this.gameAudio]) {
+      if (a && a !== target) this.fadeTo(a, 0, 600, true);
+    }
+    if (target) {
+      void target.play().catch(() => {}); // 막히면 다음 unlock()에서 재개
+      this.fadeTo(target, this.musicVol, 900, false);
+    }
+  }
+
+  /** 인트로·카메라 화면 배경음악(후보 2). */
+  playMenuMusic(): void {
+    this.switchMusic("menu");
+  }
+
+  /** 플레이 화면 배경음악(후보 1). */
+  playGameMusic(): void {
+    this.switchMusic("game");
+  }
+
+  /** 배경음악 전체 정지(페이드아웃). */
+  stopMusic(): void {
+    this.switchMusic(null);
   }
 
   private tone(

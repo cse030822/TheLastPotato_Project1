@@ -231,11 +231,15 @@ let startingGame = false;
 let mediaReady = false; // 웹캠+모델을 한 번 로드했는지(종료 후 재시작 시 즉시 복귀).
 
 const screens = new Screens({
-  onStart: () => screens.show("camera"), // START → 카메라 권한 안내 화면
+  onStart: () => {
+    sound.unlock(); // 첫 사용자 제스처 — 막혀 있던 메뉴 배경음악을 여기서 재개
+    screens.show("camera"); // START → 카메라 권한 안내 화면
+  },
   onBack: () => screens.show("intro"),
   onAllowCamera: () => void startGame(), // 카메라 권한 화면에서 실제 권한 요청 + 플레이 진입
 });
 screens.show("intro");
+sound.playMenuMusic(); // 인트로·카메라 배경음악(후보 2) — 자동재생이 막히면 첫 클릭에서 시작
 
 // --- 게임 중 도움말(플레이 방법) 오버레이 ---
 // 옛 '플레이 방법' 텍스트 화면을 게임 도중 언제든 열어보는 창으로 재사용한다.
@@ -269,7 +273,7 @@ btnResultQuit.addEventListener("click", () => {
 function quit(): void {
   resultPointer.reset();
   restart();
-  sound.stopAmbience(); // 타이틀로 돌아가면 배경 앰비언스 정지
+  sound.playMenuMusic(); // 타이틀로 돌아가면 메뉴 배경음악(후보 2)으로 복귀
   appState = "intro";
   screens.show("intro");
 }
@@ -285,7 +289,7 @@ async function startGame(): Promise<void> {
     restart();
     appState = "playing";
     screens.show("playing");
-    sound.startAmbience(); // 우주 앰비언스(배경)
+    sound.playGameMusic(); // 플레이 배경음악(후보 1)
     startingGame = false;
     return;
   }
@@ -300,7 +304,7 @@ async function startGame(): Promise<void> {
     appState = "playing";
     screens.setStatus("");
     screens.show("playing");
-    sound.startAmbience(); // 우주 앰비언스(배경)
+    sound.playGameMusic(); // 플레이 배경음악(후보 1)
     console.log("[화성 정원사] 준비 완료. 손을 화면에 비춰보세요.");
   } catch (err) {
     console.error("[화성 정원사] 카메라/모델 초기화 실패:", err);
