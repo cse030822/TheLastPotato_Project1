@@ -115,7 +115,7 @@
           <div class="howto-card">
             <div class="howto-ico">🎯</div>
             <div class="howto-h">목표</div>
-            <div class="howto-p">감자 3그루를 모두 100% 키우거나, 60초 방어를 버텨내면 승리!</div>
+            <div class="howto-p">60초를 버텨 감자를 지켜라! 살아남은 감자 수로 결과가 갈립니다 — 3그루 모두 지키면 완전 성공.</div>
           </div>
           <div class="howto-card">
             <div class="howto-ico">☝️</div>
@@ -134,8 +134,8 @@
           </div>
           <div class="howto-card">
             <div class="howto-ico">🥔</div>
-            <div class="howto-h">감자알</div>
-            <div class="howto-p">자랄수록 감자알이 돋는다. 빛나는 감자는 곤충에게서 보호된다.</div>
+            <div class="howto-h">감자 지키기</div>
+            <div class="howto-p">자랄수록 감자알이 돋습니다. 다 자란 감자도 방치하면 곤충이 갉아먹어 성장이 줄어드니 끝까지 지켜야 해요.</div>
           </div>
           <div class="howto-card">
             <div class="howto-ico">⌨️</div>
@@ -149,16 +149,49 @@
       </div>
     </div>
 
-    <!-- 카메라 권한 안내 화면: 안내 문구가 포함된 아트워크 배경 + 허용 버튼 -->
-    <div id="camera-screen" class="screen intro-screen">
-      <div class="intro-stage">
-        <img class="intro-bg" src="/camera-bg.png" alt="플레이 방법 · 카메라 권한 안내" />
-        <!-- 비어 있는 버튼 자리에 놓이는 카메라 허용 버튼. 클릭 시 권한 요청 후 게임 시작. -->
-        <button id="btn-allow" class="btn-allow" type="button">
-          <span class="btn-allow-ico">📷</span>
-          <span class="btn-allow-label">카메라 켜고 시작하기</span>
-        </button>
-        <button id="btn-cam-back" class="intro-howto intro-howto--left" type="button">‹ 뒤로</button>
+    <!-- 카메라 권한 + 플레이 방법 안내 화면: 화성 3D 씬 위에 HTML 카드로 구성 -->
+    <div id="camera-screen" class="screen">
+      <div class="screen-inner howto-inner">
+        <h2 class="howto-title">플레이 방법</h2>
+        <p class="howto-sub">
+          웹캠으로 <b>양손</b>을 인식해 조종합니다 · 시작 전 카메라 권한을 허용해 주세요.
+        </p>
+        <div class="howto-grid">
+          <div class="howto-card">
+            <div class="howto-ico">🎯</div>
+            <div class="howto-h">목표</div>
+            <div class="howto-p">외계 곤충으로부터 감자를 지켜라! 60초를 버틴 뒤 살아남은 감자 수로 결과가 갈립니다.</div>
+          </div>
+          <div class="howto-card">
+            <div class="howto-ico">☝️</div>
+            <div class="howto-h">조준 · 발사</div>
+            <div class="howto-p">양손 검지로 ‘총 자세’를 만들어 조준하고, 검지를 당기면 에너지가 발사됩니다.</div>
+          </div>
+          <div class="howto-card">
+            <div class="howto-ico">💧</div>
+            <div class="howto-h">오른손 · 성장</div>
+            <div class="howto-p">오른손 시안 에너지를 감자에 겨누면 생명 에너지가 공급되어 무럭무럭 자랍니다.</div>
+          </div>
+          <div class="howto-card">
+            <div class="howto-ico">🔥</div>
+            <div class="howto-h">왼손 · 방어</div>
+            <div class="howto-p">왼손 붉은 에너지로 몰려오는 외계 곤충을 겨눠 격퇴합니다.</div>
+          </div>
+          <div class="howto-card">
+            <div class="howto-ico">🥔</div>
+            <div class="howto-h">계속 지키기</div>
+            <div class="howto-p">다 자란 감자도 방치하면 곤충이 갉아먹어 성장이 줄어듭니다. 끝까지 지켜주세요.</div>
+          </div>
+          <div class="howto-card">
+            <div class="howto-ico">📷</div>
+            <div class="howto-h">카메라</div>
+            <div class="howto-p">아래 버튼으로 카메라를 켜면 손 인식이 시작되고 곧바로 플레이할 수 있습니다.</div>
+          </div>
+        </div>
+        <div class="screen-buttons">
+          <button id="btn-allow" class="btn btn-primary" type="button">📷 카메라 켜고 시작하기</button>
+          <button id="btn-cam-back" class="btn btn-ghost" type="button">‹ 뒤로</button>
+        </div>
         <div id="camera-status" class="screen-status"></div>
       </div>
     </div>

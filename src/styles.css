@@ -629,9 +629,10 @@ body:not([data-screen="playing"]) #potato-gauges {
   inset: 0;
   z-index: 30;
   display: flex;
-  align-items: center;
+  align-items: safe center; /* 내용이 뷰포트보다 길어도 상단이 잘리지 않도록 */
   justify-content: center;
   padding: 32px;
+  overflow-y: auto; /* 카드가 많아 넘치면 스크롤 */
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
