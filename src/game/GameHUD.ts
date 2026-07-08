@@ -26,8 +26,10 @@ export class GameHUD {
   private objGrowEl = document.getElementById("obj-grow")!;
   private gaugeLayer = document.getElementById("potato-gauges")!;
   private overlayEl = document.getElementById("result-overlay")!;
+  private overlayBadge = document.getElementById("result-badge")!;
   private overlayTitle = document.getElementById("result-title")!;
   private overlaySub = document.getElementById("result-sub")!;
+  private overlayStats = document.getElementById("result-stats")!;
 
   // 감자 인덱스별 원형 링 DOM(재사용).
   private gauges: { root: HTMLDivElement; prog: SVGCircleElement; pct: HTMLSpanElement }[] = [];
@@ -131,27 +133,54 @@ export class GameHUD {
       g.root.classList.toggle("done", pot.grown);
     }
 
-    // 결과 오버레이
-    const result = garden.phase === "won" ? "won" : garden.phase === "lost" ? "lost" : null;
-    if (result !== this.lastResult) {
-      this.lastResult = result;
-      if (result === "won") {
-        this.overlayEl.dataset.kind = "won";
-        const survived = garden.winReason === "survived";
-        this.overlayTitle.textContent = survived ? "방어 성공!" : "수확 성공!";
-        this.overlaySub.textContent = survived
-          ? `60초 방어에 성공했습니다 · 감자알 ${garden.totalHarvest}개 수확 · [R] 다시 시작`
-          : `감자를 모두 키워냈습니다 · 감자알 ${garden.totalHarvest}개 · [R] 다시 시작`;
-        this.overlayEl.classList.add("visible");
-      } else if (result === "lost") {
-        this.overlayEl.dataset.kind = "lost";
-        this.overlayTitle.textContent = "밭이 전멸했습니다";
-        this.overlaySub.textContent = "곤충이 감자를 모두 삼켰습니다 · [R] 다시 시작";
-        this.overlayEl.classList.add("visible");
-      } else {
-        this.overlayEl.classList.remove("visible");
-      }
+    // 결과 오버레이(종료 시점 생존 감자 수로 등급이 갈린다)
+    const tier = garden.resultTier; // "perfect" | "partial" | "fail" | null
+    if (tier !== this.lastResult) {
+      this.lastResult = tier;
+      if (tier) this.showResult(garden, tier);
+      else this.overlayEl.classList.remove("visible");
     }
+  }
+
+  /** 등급별(완전 성공 / 부분 성공 / 실패) 결과 카드 내용을 채우고 표시한다. */
+  private showResult(garden: Garden, tier: "perfect" | "partial" | "fail"): void {
+    const survivors = garden.survivors;
+    const total = garden.maxPotatoes;
+    const harvest = garden.totalHarvest;
+    this.overlayEl.dataset.kind = tier;
+
+    let badge = "";
+    let title = "";
+    let sub = "";
+    const stats: string[] = [];
+
+    if (tier === "perfect") {
+      badge = "🏆";
+      const grown = garden.winReason === "grown";
+      title = grown ? "완전 성공!" : "완벽한 방어!";
+      sub = grown
+        ? "감자 3그루를 모두 100%까지 키워냈습니다 — 붉은 화성이 초록으로 물들었습니다."
+        : "3그루를 모두 끝까지 지켜냈습니다 — 척박한 화성에 마침내 생명이 뿌리내렸습니다.";
+      stats.push(`🥔 생존 ${survivors}/${total}그루`, `🌱 수확한 감자알 ${harvest}개`);
+    } else if (tier === "partial") {
+      badge = "🌿";
+      title = "생명을 지켜냈다";
+      sub = `${survivors}그루를 끝까지 지켜냈습니다. 전부는 아니어도, 척박한 화성에서 살려낸 소중한 생명입니다.`;
+      stats.push(`🥔 생존 ${survivors}/${total}그루`, `🌱 수확한 감자알 ${harvest}개`);
+    } else {
+      badge = "🥀";
+      title = "밭이 전멸했습니다";
+      sub = "곤충이 감자를 모두 삼켰습니다. 하지만 화성 개척은 몇 번이고 다시 도전할 수 있습니다.";
+    }
+
+    this.overlayBadge.textContent = badge;
+    this.overlayTitle.textContent = title;
+    this.overlaySub.textContent = sub;
+    this.overlayStats.innerHTML = stats
+      .map((s) => `<span class="rs-chip">${s}</span>`)
+      .join("");
+    this.overlayStats.style.display = stats.length ? "flex" : "none";
+    this.overlayEl.classList.add("visible");
   }
 
   /** 재시작: 게이지·오버레이 숨김. */

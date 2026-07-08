@@ -46,6 +46,10 @@ export class Garden {
   readonly survivalDuration = 60; // 60초 방어 목표
   /** 승리 사유: 감자를 모두 키움("grown") vs 60초 방어 성공("survived"). */
   winReason: "grown" | "survived" | null = null;
+  /** 결과 등급: 3그루 모두 지킴(perfect) · 1~2그루 지킴(partial) · 전멸(fail). */
+  resultTier: "perfect" | "partial" | "fail" | null = null;
+  /** 종료 시점 살아남은 감자 수(결과 문구·통계용). */
+  survivors = 0;
 
   /** 감자알이 새로 돋을 때(월드 좌표) 호출 — 수확 연출·사운드용. main이 주입. */
   onHarvest: ((worldPos: THREE.Vector3) => void) | null = null;
@@ -226,28 +230,35 @@ export class Garden {
 
     for (const pot of this.potatoes) pot.update(dt);
 
-    // 승패 판정(에너지 단계 이후)
-    //  - 패배: 감자가 모두 파괴됨
-    //  - 승리①(grown): 씨앗 3개를 모두 심고, 3개 모두 살아서 100% 성장(수확 성공) — 즉시
-    //  - 승리②(survived): 60초 방어 카운트다운을 버텨냄(감자 생존)
+    // 승패 판정(에너지 단계 이후). 종료 시점 "살아남은 감자 수"로 결과 등급이 갈린다.
+    //  - 완전 성공(perfect): 3그루 모두 생존, 또는 3그루 모두 100% 성장 — 즉시
+    //  - 부분 성공(partial): 60초를 버텼고 1~2그루 생존 — 실패가 아닌 보상 결과
+    //  - 실패(fail): 감자가 모두 파괴됨
     if (!this.ended && this.phase === "energy") {
-      const anyAlive = this.potatoes.some((p) => p.alive);
+      const survivors = this.potatoes.filter((p) => p.alive).length;
       const allGrown =
         this.potatoes.length === this.maxPotatoes &&
         this.potatoes.every((p) => p.alive && p.grown);
-      if (!anyAlive) {
+      const timeUp = this.missionElapsed >= this.survivalDuration;
+      if (survivors === 0) {
         this.ended = true;
         this.phase = "lost";
+        this.survivors = 0;
+        this.resultTier = "fail";
         this.onLose();
       } else if (allGrown) {
         this.ended = true;
         this.phase = "won";
+        this.survivors = survivors;
         this.winReason = "grown";
+        this.resultTier = "perfect";
         this.onWin();
-      } else if (this.missionElapsed >= this.survivalDuration) {
+      } else if (timeUp) {
         this.ended = true;
         this.phase = "won";
+        this.survivors = survivors;
         this.winReason = "survived";
+        this.resultTier = survivors >= this.maxPotatoes ? "perfect" : "partial";
         this.onWin();
       }
     }
@@ -266,5 +277,7 @@ export class Garden {
     this.timerStarted = false;
     this.ended = false;
     this.winReason = null;
+    this.resultTier = null;
+    this.survivors = 0;
   }
 }
