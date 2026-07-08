@@ -474,6 +474,145 @@ body {
   stroke: rgba(91, 255, 122, 0.4);
 }
 
+/* ==========================================================================
+   게임 중 이벤트 이팩트(#event-fx) — 안내창이 아니라 쾅 튀는 연출.
+   ========================================================================== */
+#event-fx {
+  position: fixed;
+  inset: 0;
+  z-index: 15; /* HUD(10) 위, 결과 오버레이(20) 아래 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none; /* 실시간 방어를 막지 않도록 클릭 통과 */
+  opacity: 0;
+  visibility: hidden;
+}
+#event-fx.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* 화면 전체 번쩍(아주 짧게) — 등급 색으로 임팩트를 준다. */
+#event-fx .efx-flash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 32%, var(--efx-color-a) 100%);
+  opacity: 0;
+}
+#event-fx.show .efx-flash {
+  animation: efx-flash 0.5s ease-out;
+}
+@keyframes efx-flash {
+  0% { opacity: 0; }
+  20% { opacity: 0.6; }
+  100% { opacity: 0; }
+}
+
+.efx {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+  padding: 24px;
+  --efx-color: #ff5a3c;
+  --efx-color-a: rgba(255, 90, 60, 0.28);
+}
+.efx[data-tone="danger"] {
+  --efx-color: #ff5a3c;
+  --efx-color-a: rgba(255, 90, 60, 0.28);
+}
+.efx[data-tone="warn"] {
+  --efx-color: #ffca57;
+  --efx-color-a: rgba(255, 190, 70, 0.24);
+}
+.efx[data-tone="life"] {
+  --efx-color: #7dff92;
+  --efx-color-a: rgba(91, 255, 122, 0.24);
+}
+#event-fx.show .efx {
+  animation: efx-pop 2.4s cubic-bezier(0.15, 0.85, 0.25, 1) both;
+}
+@keyframes efx-pop {
+  0% { opacity: 0; transform: scale(1.7); filter: blur(14px); }
+  7% { opacity: 1; transform: scale(0.97); filter: blur(0); }
+  12% { transform: scale(1); }
+  78% { opacity: 1; transform: scale(1) translateY(0); }
+  100% { opacity: 0; transform: scale(1.06) translateY(-24px); filter: blur(2px); }
+}
+
+/* 플레이어가 준 이미지: 이팩트 중앙에 크게 박힌다. */
+.efx-img {
+  display: none;
+  width: auto;
+  height: auto;
+  max-width: min(46vw, 340px);
+  max-height: 38vh;
+  filter: drop-shadow(0 0 26px var(--efx-color-a));
+}
+.efx-img.has {
+  display: block;
+}
+#event-fx.show .efx-img {
+  animation: efx-img 2.4s ease both;
+}
+@keyframes efx-img {
+  0% { transform: scale(0.6) rotate(-4deg); opacity: 0; }
+  10% { transform: scale(1) rotate(0); opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* 제목 뒤로 스쳐 지나가는 빛줄기(스트릭). */
+.efx-streak {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 140%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--efx-color), transparent);
+  opacity: 0;
+}
+#event-fx.show .efx-streak {
+  animation: efx-streak 0.9s ease-out;
+}
+@keyframes efx-streak {
+  0% { transform: translate(-50%, -50%) scaleX(0); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: translate(-50%, -50%) scaleX(1); opacity: 0; }
+}
+
+.efx-title {
+  font-size: clamp(34px, 7vw, 76px);
+  font-weight: 900;
+  letter-spacing: 2px;
+  line-height: 1.05;
+  color: var(--efx-color);
+  text-shadow: 0 0 30px var(--efx-color), 0 4px 24px rgba(0, 0, 0, 0.6);
+}
+#event-fx.show .efx-title {
+  animation: efx-shake 0.5s ease-in-out;
+}
+@keyframes efx-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(7px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(3px); }
+}
+
+.efx-sub {
+  font-size: clamp(14px, 2vw, 20px);
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.85);
+  opacity: 0.92;
+}
+
 /* --- 승리/패배 결과 오버레이 --- */
 #result-overlay {
   position: fixed;

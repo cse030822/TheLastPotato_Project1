@@ -10,6 +10,7 @@ import { Beam } from "./particles/Beam";
 import { BugManager } from "./game/BugManager";
 import { Garden } from "./game/Garden";
 import { GameHUD } from "./game/GameHUD";
+import { EventFx } from "./game/EventFx";
 import { HarvestFx } from "./game/HarvestFx";
 import { Sound } from "./game/Sound";
 import { Screens } from "./game/Screens";
@@ -64,6 +65,14 @@ garden.onHarvest = (wp) => {
 
 // 7단계 게임 HUD(상태 패널·감자별 성장 게이지·결과 오버레이).
 const gameHud = new GameHUD(mars.camera);
+
+// 게임 중 이벤트 이팩트(곤충 출현·시간 기점·완전 성장). 게임을 멈추지 않는 연출.
+const eventFx = new EventFx();
+// 각 이팩트를 한 번씩만 띄우기 위한 플래그(재시작 시 초기화).
+let fxFirstBug = false;
+let fx30 = false;
+let fx10 = false;
+let fxGrown = false;
 
 // 외계 곤충 웨이브. 에너지 단계부터 등장 → 가장 가까운(비보호) 감자로 접근.
 const bugs = new BugManager(mars.scene, garden.potatoes, () => {});
@@ -165,6 +174,8 @@ function restart(): void {
   bugs.reset();
   gameHud.reset();
   harvestFx.clear();
+  eventFx.reset();
+  fxFirstBug = fx30 = fx10 = fxGrown = false;
   energy = 100;
   aimLeft.present = false;
   aimRight.present = false;
@@ -288,6 +299,27 @@ function loop(now: number): void {
   // 8) 수확 입자 연출 + 게임 HUD(목표·타이머·WAVE·에너지·성장 링·조작·결과).
   harvestFx.update(dt);
   gameHud.update(garden, bugs.count, energy);
+
+  // 9) 이벤트 이팩트(각각 한 번씩): 곤충 첫 등장 · 30초/10초 기점 · 첫 완전 성장.
+  //    이미지는 play({..., image: "/파일.png"})로 넣으면 이팩트 중앙에 크게 박힌다.
+  if (!fxFirstBug && garden.threatsActive && bugs.count > 0) {
+    fxFirstBug = true;
+    eventFx.play({ tone: "danger", title: "외계 곤충 출현!", sub: "왼손 붉은 에너지로 격퇴하라!" });
+  }
+  if (garden.phase === "energy") {
+    if (!fx30 && garden.timeLeft <= 30) {
+      fx30 = true;
+      eventFx.play({ tone: "warn", title: "절반 지점!", sub: "30초 남았다 — 감자를 지켜라" });
+    }
+    if (!fx10 && garden.timeLeft <= 10) {
+      fx10 = true;
+      eventFx.play({ tone: "danger", title: "마지막 10초!", sub: "끝까지 버텨라!" });
+    }
+    if (!fxGrown && garden.potatoes.some((p) => p.grown)) {
+      fxGrown = true;
+      eventFx.play({ tone: "life", title: "감자 완전 성장!", sub: "화성에 생명이 뿌리내렸다" });
+    }
+  }
   }
 
   // 화성 환경 애니메이션(먼지·모래 폭포·위성·스파크) — 배경으로 항상 갱신
@@ -304,7 +336,7 @@ pip.dataset.mode = "pip";
 
 // 개발 편의용 디버그 훅(프로덕션 번들에는 포함되지 않음).
 if (import.meta.env.DEV) {
-  (window as unknown as { __mars: unknown }).__mars = { mars, tracker, jets, beamRight, beamLeft, bugs, garden, gameHud, harvestFx, screens, THREE };
+  (window as unknown as { __mars: unknown }).__mars = { mars, tracker, jets, beamRight, beamLeft, bugs, garden, gameHud, harvestFx, eventFx, screens, THREE };
 }
 
 // 렌더 루프는 즉시 시작(인트로 화면 뒤로 화성 씬이 바로 보인다).
