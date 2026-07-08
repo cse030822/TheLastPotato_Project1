@@ -18,7 +18,8 @@ export class BugManager {
   private failed = false;
 
   private readonly center = new THREE.Vector3(TERRAIN_CENTER.x, 0, TERRAIN_CENTER.z);
-  private readonly damagePerSec = 22; // 감자에 닿아 있는 동안 초당 체력 감소
+  private readonly damagePerSec = 22; // 성장이 0까지 깎인 뒤 초당 체력 감소(파괴용)
+  private readonly growthLossPerSec = 0.07; // 갉아먹는 동안 초당 성장 감소(성장률 0.05보다 큼)
 
   private readonly _p = new THREE.Vector3();
   private readonly _end = new THREE.Vector3();
@@ -139,8 +140,14 @@ export class BugManager {
       } else {
         attacking = !bug.isEmerging() && dist < bug.attackRadius;
         if (attacking) {
-          target.health -= this.damagePerSec * dt;
-          if (target.health <= 0) target.destroy();
+          if (target.growth > 0) {
+            // 잎·감자알을 갉아먹어 성장 퍼센트가 되돌아간다(다 자란 감자도 방치하면 깎임).
+            target.growth = Math.max(0, target.growth - this.growthLossPerSec * dt);
+          } else {
+            // 더 갉아먹을 성장이 없으면 씨감자 체력을 깎는다 → 0이면 파괴.
+            target.health -= this.damagePerSec * dt;
+            if (target.health <= 0) target.destroy();
+          }
         }
       }
       bug.update(dt, target.position, attacking);

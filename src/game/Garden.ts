@@ -206,9 +206,11 @@ export class Garden {
     // 타이머는 곤충이 등장하는 퇴비 단계부터(퇴비·에너지 관통) 게임 종료 전까지 흐른다.
     if (this.timerStarted && !this.ended) this.missionElapsed += dt;
 
-    // 에너지 공급 판정: 감자별로 이번 프레임 발광 여부를 갱신
+    // 에너지 공급 판정: 감자별로 이번 프레임 발광 여부를 갱신.
+    // 보호막(glowing)은 "이번 프레임 에너지 빔을 받는 동안"에만 생긴다.
+    // 다 자란 감자라도 방치하면 곤충이 갉아먹어 성장이 되돌아가므로 계속 지켜야 한다.
     for (const pot of this.potatoes) {
-      pot.glowing = pot.grown; // 성숙한 감자는 상시 발광/보호
+      pot.glowing = false;
     }
     if (this.energyStarted && energyBeam.active && energyBeam.grounded) {
       for (const pot of this.potatoes) {

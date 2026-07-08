@@ -8,9 +8,9 @@ export const TUBERS_PER_PLANT = 5;
  *  - 씨감자(seed) → 성장(growth 0~1)으로 줄기·잎이 길게 자란다.
  *  - 성장 후반부(≈50% 이후)부터 두둑 둘레로 **감자알**이 하나씩 돋아난다.
  *  - 감자알이 모두(5개) 돋으면 성숙(grown) — 수확 완료로 승리에 기여.
- *  - 에너지를 받는 동안(glowing) 초록빛을 강하게 내고, 그 동안 곤충이 접근하지 못한다.
- *  - 다 자라면 성숙 상태로 항상 은은히 빛나며 보호된다.
- *  - 곤충이 닿으면(비보호 상태) health가 깎이고, 0이면 파괴.
+ *  - 에너지를 받는 동안(glowing) 초록빛을 강하게 내고, 그 동안'만' 곤충이 접근하지 못한다.
+ *  - 다 자란 감자도 방치하면 곤충이 갉아먹어 성장(growth)이 되돌아가고 감자알이 흙 속으로 다시 들어간다.
+ *  - 성장이 0까지 깎인 뒤에도 계속 갉아먹히면 씨감자 health가 깎이고, 0이면 파괴.
  */
 export class Potato {
   readonly group = new THREE.Group();
@@ -183,6 +183,11 @@ export class Potato {
         }
         // 팝 진행: 약 0.7초에 완전히 돋음.
         this.tuberPop[i] = Math.min(1, this.tuberPop[i] + dt / 0.7);
+      } else if (this.tuberPop[i] > 0) {
+        // 성장이 임계값 아래로 깎이면(곤충이 갉아먹음) 감자알이 흙 속으로 되돌아간다.
+        this.tuberPop[i] = Math.max(0, this.tuberPop[i] - dt / 0.7);
+        // 완전히 들어가면 "돋지 않은" 상태로 복귀 → 다시 키우면 수확 연출이 재생된다.
+        if (this.tuberPop[i] <= 0) this.tuberSpawned[i] = false;
       }
       const p = this.tuberPop[i];
       const t = this.tubers[i];
