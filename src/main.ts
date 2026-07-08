@@ -234,12 +234,64 @@ const screens = new Screens({
   onStart: () => {
     sound.unlock(); // 첫 사용자 제스처 — 막혀 있던 메뉴 배경음악을 여기서 재개
     screens.show("camera"); // START → 카메라 권한 안내 화면
+    void autoListCameras(); // 이미 권한이 있으면 카메라 목록을 조용히 채운다
   },
   onBack: () => screens.show("intro"),
   onAllowCamera: () => void startGame(), // 카메라 권한 화면에서 실제 권한 요청 + 플레이 진입
+  onRefreshCameras: () => void refreshCameras(), // "카메라 찾기" — 권한 허용 후 목록 채우기
 });
 screens.show("intro");
-sound.playMenuMusic(); // 인트로·카메라 배경음악(후보 2) — 자동재생이 막히면 첫 클릭에서 시작
+sound.playMenuMusic(); // 인트로·카메라 배경음악(후보 2) — 자동재생이 되면 즉시 재생
+
+// 브라우저 자동재생 정책상 소리는 첫 사용자 조작 후에만 허용된다.
+// 그래서 타이틀 화면에서의 첫 조작(어디를 클릭·탭하거나 아무 키나 누르면)에
+// 곧바로 후보 2 음악이 시작되도록 한 번만 듣는 리스너를 건다(START 버튼을 굳이 안 눌러도 됨).
+function kickMenuMusicOnFirstGesture(): void {
+  const kick = (): void => {
+    sound.unlock(); // 오디오 컨텍스트 재개 + 막혀 있던 메뉴 음악 재생
+    window.removeEventListener("pointerdown", kick);
+    window.removeEventListener("keydown", kick);
+  };
+  window.addEventListener("pointerdown", kick);
+  window.addEventListener("keydown", kick);
+}
+kickMenuMusicOnFirstGesture();
+
+/** 이미 카메라 권한이 있으면(라벨이 보이면) 목록을 조용히 채운다. 권한 요청은 하지 않음. */
+async function autoListCameras(): Promise<void> {
+  try {
+    const cams = await tracker.listCameras();
+    if (cams.some((c) => c.label)) screens.setCameras(cams);
+  } catch {
+    /* 목록 조회 실패는 무시 — 사용자가 '카메라 찾기'로 다시 시도할 수 있다 */
+  }
+}
+
+/** "카메라 찾기": 권한을 확보하고 실제 카메라 이름으로 선택 목록을 채운다. */
+async function refreshCameras(): Promise<void> {
+  sound.unlock();
+  screens.setRefreshBusy(true);
+  screens.setStatus("카메라 목록을 불러오는 중…", "loading");
+  try {
+    await tracker.ensureCameraPermission(); // 라벨 확보용 임시 권한
+    const cams = await tracker.listCameras();
+    screens.setCameras(cams);
+    screens.setStatus(
+      cams.length
+        ? `카메라 ${cams.length}대를 찾았어요. 원하는 카메라를 고른 뒤 시작하세요.`
+        : "사용 가능한 카메라를 찾지 못했습니다.",
+      "",
+    );
+  } catch (err) {
+    console.error("[화성 정원사] 카메라 목록 로드 실패:", err);
+    screens.setStatus(
+      "카메라 권한이 필요합니다. 브라우저에서 카메라 사용을 허용해 주세요.",
+      "error",
+    );
+  } finally {
+    screens.setRefreshBusy(false);
+  }
+}
 
 // --- 게임 중 도움말(플레이 방법) 오버레이 ---
 // 옛 '플레이 방법' 텍스트 화면을 게임 도중 언제든 열어보는 창으로 재사용한다.
@@ -284,8 +336,27 @@ async function startGame(): Promise<void> {
   startingGame = true;
   sound.unlock(); // 사용자 제스처(클릭) 시점에 오디오 컨텍스트 준비
 
+  const wantId = screens.selectedCameraId; // 사용자가 고른 카메라(빈 문자열=기본)
+
   // 종료 후 재시작: 웹캠·모델은 이미 로드돼 있으니 바로 플레이로 복귀.
+  // 단, 다른 카메라를 새로 골랐다면 그 카메라로 스트림만 교체한다.
   if (mediaReady) {
+    if (wantId && wantId !== tracker.deviceId) {
+      screens.setBusy(true);
+      screens.setStatus("카메라 전환 중…", "loading");
+      try {
+        await tracker.startWebcam(wantId);
+        overlay.resize();
+        screens.setStatus("");
+      } catch (err) {
+        console.error("[화성 정원사] 카메라 전환 실패:", err);
+        screens.setStatus("선택한 카메라를 열 수 없습니다. 다른 카메라를 선택해 주세요.", "error");
+        screens.setBusy(false);
+        startingGame = false;
+        return;
+      }
+      screens.setBusy(false);
+    }
     restart();
     appState = "playing";
     screens.show("playing");
@@ -297,7 +368,7 @@ async function startGame(): Promise<void> {
   screens.setBusy(true);
   screens.setStatus("카메라 준비 중…", "loading");
   try {
-    await tracker.startWebcam(); // 웹캠 권한 요청 + 스트림
+    await tracker.startWebcam(wantId || undefined); // 선택한 카메라(없으면 기본)로 연결
     await tracker.loadModel(); // MediaPipe HandLandmarker 로드
     overlay.resize();
     mediaReady = true;

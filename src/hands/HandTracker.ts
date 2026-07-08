@@ -43,20 +43,50 @@ export class HandTracker {
   // 웹캠 프레임이 갱신되지 않은 렌더 프레임에서 재사용할 마지막 결과(깜빡임 방지).
   private lastResult: FrameResult = { hands: [], left: null, right: null };
 
+  // 현재 사용 중인 카메라 deviceId(전환 여부 판단용).
+  private currentDeviceId: string | null = null;
+
   constructor(private readonly video: HTMLVideoElement) {}
 
-  /** 웹캠 권한 요청 + 비디오 스트림 연결 */
-  async startWebcam(): Promise<void> {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { width: 1280, height: 720, facingMode: "user" },
-      audio: false,
-    });
+  /** 현재 연결된 카메라의 deviceId(없으면 null). */
+  get deviceId(): string | null {
+    return this.currentDeviceId;
+  }
+
+  /**
+   * 웹캠 권한 요청 + 비디오 스트림 연결.
+   * deviceId를 주면 그 카메라(외장 웹캠 등)로, 없으면 기본 전면 카메라로 연결한다.
+   * 카메라 전환 시 이전 스트림의 트랙은 정리한다.
+   */
+  async startWebcam(deviceId?: string): Promise<void> {
+    const old = this.video.srcObject as MediaStream | null;
+    if (old) old.getTracks().forEach((t) => t.stop());
+
+    const video: MediaTrackConstraints = deviceId
+      ? { width: 1280, height: 720, deviceId: { exact: deviceId } }
+      : { width: 1280, height: 720, facingMode: "user" };
+    const stream = await navigator.mediaDevices.getUserMedia({ video, audio: false });
     this.video.srcObject = stream;
+    // 실제로 열린 트랙의 deviceId를 기록(제약이 근사 매칭될 수 있으므로 설정값 우선).
+    this.currentDeviceId =
+      stream.getVideoTracks()[0]?.getSettings().deviceId ?? deviceId ?? null;
     await this.video.play();
     await new Promise<void>((resolve) => {
       if (this.video.readyState >= 2) return resolve();
       this.video.onloadeddata = () => resolve();
     });
+  }
+
+  /** 사용 가능한 카메라(비디오 입력) 목록. 라벨·deviceId는 권한 허용 후에만 채워진다. */
+  async listCameras(): Promise<MediaDeviceInfo[]> {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    return devices.filter((d) => d.kind === "videoinput");
+  }
+
+  /** 카메라 라벨을 얻기 위해 임시로 권한만 확보한다(스트림은 즉시 정리). */
+  async ensureCameraPermission(): Promise<void> {
+    const tmp = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    tmp.getTracks().forEach((t) => t.stop());
   }
 
   /** MediaPipe 모델 로드 */
