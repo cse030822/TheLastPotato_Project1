@@ -126,7 +126,7 @@ function aimFire(a: AimPoint, beam: Beam, origin: THREE.Vector3, dt: number): vo
   sound.unlock(); // 손 발사도 사용자 제스처 — 오디오 준비
   _dir.copy(_target).sub(origin).normalize();
   beam.set(true, origin, _dir);
-  bugs.hitBeam(origin, _dir, 45, 9 * dt);
+  bugs.hitBeam(origin, _dir, 45, 13 * dt); // 초당 13 데미지(체력 3 → 약 0.23초 접촉이면 격파)
 }
 
 // 제스처(FIRE)가 잘 안 될 때 대비: [Space]로 씨앗 심기.

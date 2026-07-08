@@ -119,7 +119,7 @@ export class Bug {
   health = 3; // 빔 피격 내구도
   removeMe = false;
   readonly attackRadius = 0.85; // 감자에 닿는 거리
-  readonly hitRadius = 0.7; // 빔 충돌 반경
+  readonly hitRadius = 1.15; // 빔 충돌 반경(조준이 조금 빗나가도 맞도록 넉넉히)
 
   private readonly sizeScale: number;
   private readonly bodyHeight: number;
