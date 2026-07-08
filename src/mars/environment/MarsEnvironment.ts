@@ -1,7 +1,8 @@
 import * as THREE from "three";
 import { Sky } from "./Sky";
 import { createTerrain } from "./Terrain";
-import { createRocks, createGravel } from "./Rocks";
+import { createRocks, createNearRocks, createGravel } from "./Rocks";
+import { createPlants } from "./Plants";
 import { createCrackedFloor } from "./Floor";
 import { EdenDome } from "./EdenDome";
 import { DustField } from "./DustField";
@@ -40,10 +41,12 @@ export class MarsEnvironment {
     // --- 조명: 노을/새벽의 낮고 붉은 태양 → 길고 부드러운 그림자 ---
     this.setupLights(scene);
 
-    // --- 지형(중·후경) + 각진 바위 + 근경 자갈 + 전경 금 간 석판 바닥 ---
+    // --- 지형(중·후경) + 각진 바위 + 근경 자갈 + 마른 관목 + 전경 금 간 석판 바닥 ---
     this.group.add(createTerrain());
     this.group.add(createRocks());
+    this.group.add(createNearRocks());
     this.group.add(createGravel());
+    this.group.add(createPlants());
     this.group.add(createCrackedFloor());
 
     // --- 무너진 에덴 돔 + 소품 + God Ray + 모래 폭포 ---

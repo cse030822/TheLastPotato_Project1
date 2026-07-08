@@ -7,7 +7,7 @@ import { terrainHeight } from "./heightfield";
  * 둥근 형태 대신 정점을 흩뜨린 저폴리 다면체를 flatShading으로 표현.
  * 게임플레이 구역(돔 중심 반경) 안쪽에는 배치하지 않아 시야를 막지 않는다.
  */
-export function createRocks(count = 46): THREE.Group {
+export function createRocks(count = 62): THREE.Group {
   const group = new THREE.Group();
   const rng = makeRng(1337);
 
@@ -53,6 +53,54 @@ export function createRocks(count = 46): THREE.Group {
     group.add(rock);
   }
 
+  return group;
+}
+
+/**
+ * 화단 가까이 흩뿌리는 중형 바위 몇 개(전경 디테일).
+ * 감자밭·정면 플레이 시야는 비워 조준을 방해하지 않는다.
+ */
+export function createNearRocks(count = 12): THREE.Group {
+  const group = new THREE.Group();
+  const rng = makeRng(24601);
+  const mats = [
+    new THREE.MeshStandardMaterial({ color: 0x5a2c1c, roughness: 1, flatShading: true }),
+    new THREE.MeshStandardMaterial({ color: 0x743c22, roughness: 0.95, flatShading: true }),
+    new THREE.MeshStandardMaterial({ color: 0x3e2015, roughness: 1, flatShading: true }),
+  ];
+  const centerX = 0;
+  const centerZ = -3;
+
+  let placed = 0;
+  let guard = 0;
+  while (placed < count && guard++ < count * 20) {
+    const ang = rng() * Math.PI * 2;
+    const radius = 4 + rng() * 8; // 4~12: 화단 바로 바깥~근경
+    const x = centerX + Math.cos(ang) * radius;
+    const z = centerZ + Math.sin(ang) * radius;
+    // 감자밭 + 정면 플레이 구역은 비운다.
+    if (x > -4.5 && x < 4.5 && z > -8 && z < 1.2) continue;
+
+    const scale = 0.5 + rng() * 1.3;
+    const geo = new THREE.DodecahedronGeometry(scale, 0);
+    const p = geo.attributes.position as THREE.BufferAttribute;
+    for (let v = 0; v < p.count; v++) {
+      const j = 0.5;
+      p.setX(v, p.getX(v) * (1 + (rng() - 0.5) * j));
+      p.setY(v, p.getY(v) * (1 + (rng() - 0.5) * j));
+      p.setZ(v, p.getZ(v) * (1 + (rng() - 0.5) * j));
+    }
+    geo.computeVertexNormals();
+
+    const rock = new THREE.Mesh(geo, mats[(rng() * mats.length) | 0]);
+    rock.position.set(x, terrainHeight(x, z) + scale * (0.15 + rng() * 0.25), z);
+    rock.rotation.set(rng() * Math.PI, rng() * Math.PI, rng() * Math.PI);
+    rock.scale.set(1, 0.7 + rng() * 0.5, 1);
+    rock.castShadow = true;
+    rock.receiveShadow = true;
+    group.add(rock);
+    placed++;
+  }
   return group;
 }
 
