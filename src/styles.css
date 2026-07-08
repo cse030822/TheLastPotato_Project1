@@ -704,9 +704,53 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.14);
   color: #f3e6da;
 }
-#result-restart {
-  margin-top: 22px;
-  font-size: 13px;
+#result-actions {
+  margin-top: 26px;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  /* 오버레이는 pointer-events:none이라 버튼만 다시 켜서 마우스로도 누를 수 있게. */
+  pointer-events: auto;
+}
+.result-btn {
+  position: relative;
+  overflow: hidden;
+  min-width: 150px;
+  padding: 13px 22px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 233, 214, 0.35);
+  background: rgba(255, 255, 255, 0.06);
+  color: #f3e6da;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, transform 0.2s;
+}
+.result-btn:hover,
+.result-btn[data-hover="1"] {
+  border-color: currentColor;
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px);
+}
+/* 손 커서가 머무는 동안 왼→오로 차오르는 진행 채움(--dwell: 0~1). */
+.rb-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  transform: scaleX(var(--dwell, 0));
+  background: currentColor;
+  opacity: 0.3;
+  pointer-events: none;
+  transition: transform 0.06s linear;
+}
+.rb-label {
+  position: relative; /* 채움 위에 글자 */
+}
+#result-hint {
+  margin-top: 16px;
+  font-size: 12px;
   letter-spacing: 1px;
   color: var(--hud-dim);
   animation: result-blink 1.6s ease-in-out infinite;

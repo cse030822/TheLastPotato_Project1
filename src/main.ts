@@ -14,6 +14,7 @@ import { EventFx } from "./game/EventFx";
 import { HarvestFx } from "./game/HarvestFx";
 import { Sound } from "./game/Sound";
 import { Screens } from "./game/Screens";
+import { PointerSelect } from "./game/PointerSelect";
 import * as THREE from "three";
 
 // --- DOM 참조 ---
@@ -78,6 +79,10 @@ let fxGrown = false;
 
 // 외계 곤충 웨이브. 에너지 단계부터 등장 → 가장 가까운(비보호) 감자로 접근.
 const bugs = new BugManager(mars.scene, garden.potatoes, () => {});
+// 곤충 효과음: 출현·갉아먹기·격파.
+bugs.onSpawn = () => sound.bugSpawn();
+bugs.onBite = () => sound.bugBite();
+bugs.onKill = () => sound.bugKilled();
 
 // 손 조준점(크로스헤어) + 지면 목표점 계산용
 const crosshair = new Crosshair();
@@ -95,16 +100,30 @@ const ENERGY_DRAIN = 26; // %/초(분사 중)
 const ENERGY_RECHARGE = 34; // %/초(비분사)
 
 // 프레임 간 보간된 조준점(웹캠 프레임레이트로 인한 뚝뚝 끊김 제거).
-const aimLeft: AimPoint = { present: false, x: 0.5, y: 0.5, state: "IDLE" };
-const aimRight: AimPoint = { present: false, x: 0.5, y: 0.5, state: "IDLE" };
-let prevRightFire = false;
+// absent: 손이 감지되지 않은 누적 시간 — 짧은 드롭아웃은 유예(grace)로 흡수한다.
+type AimState = AimPoint & { absent: number };
+const aimLeft: AimState = { present: false, x: 0.5, y: 0.5, state: "IDLE", absent: 0 };
+const aimRight: AimState = { present: false, x: 0.5, y: 0.5, state: "IDLE", absent: 0 };
+let plantCooldown = 0; // 씨앗 연발 방지 타이머(초). 0 이하일 때만 다음 씨앗 심기.
+let prevBeamR = false; // 오른손 빔 발사 상태(상승엣지에 발사음)
+let prevBeamL = false; // 왼손 빔 발사 상태(상승엣지에 발사음)
+
+// 손이 순간적으로(1~3프레임) 사라져도 이 시간 동안은 마지막 조준·상태를 유지한다.
+// 두 손이 동시에 있을 때 한쪽 손의 미세한 감지 드롭아웃으로 빔이 깜빡이는 것을 막는다.
+const AIM_GRACE = 0.12;
 
 /** 손 화면좌표를 부드럽게 따라가도록 보간(등장 순간에는 스냅). */
-function updateAim(hand: HandReading | null, a: AimPoint, dt: number): void {
+function updateAim(hand: HandReading | null, a: AimState, dt: number): void {
   if (!hand) {
-    a.present = false;
+    // 감지가 잠깐 끊긴 것일 수 있으므로 유예시간 동안은 마지막 조준/상태를 그대로 유지.
+    // (유예 중엔 present=true, x/y·state 불변 → 빔이 끊기지 않는다.)
+    if (a.present) {
+      a.absent += dt;
+      if (a.absent > AIM_GRACE) a.present = false;
+    }
     return;
   }
+  a.absent = 0;
   if (!a.present) {
     a.x = hand.screenX;
     a.y = hand.screenY;
@@ -128,16 +147,28 @@ function aimGround(a: AimPoint, out: THREE.Vector3): boolean {
   return true;
 }
 
-/** 손동작(FIRE) 즉시 그 방향(지면 목표점)으로 빔을 쏘고 곤충을 타격한다. */
-function aimFire(a: AimPoint, beam: Beam, origin: THREE.Vector3, dt: number): void {
+/**
+ * 손동작(FIRE) 즉시 그 방향(지면 목표점)으로 빔을 쏜다.
+ *  - 오른손(에너지): 감자 성장 전용 — 곤충을 타격하지 않는다.
+ *  - 왼손(방어): 곤충 격퇴 전용 — hitsBugs=true일 때만 곤충에 데미지.
+ * @returns 이번 프레임에 실제로 발사했는지(발사음 상승엣지 판정용).
+ */
+function aimFire(
+  a: AimPoint,
+  beam: Beam,
+  origin: THREE.Vector3,
+  dt: number,
+  hitsBugs: boolean,
+): boolean {
   if (!a.present || a.state !== "FIRE" || !aimGround(a, _target)) {
     beam.set(false, origin, origin);
-    return;
+    return false;
   }
   sound.unlock(); // 손 발사도 사용자 제스처 — 오디오 준비
   _dir.copy(_target).sub(origin).normalize();
   beam.set(true, origin, _dir);
-  bugs.hitBeam(origin, _dir, 45, 13 * dt); // 초당 13 데미지(체력 3 → 약 0.23초 접촉이면 격파)
+  if (hitsBugs) bugs.hitBeam(origin, _dir, 45, 13 * dt); // 초당 13 데미지(체력 3 → 약 0.23초 접촉이면 격파)
+  return true;
 }
 
 // 제스처(FIRE)가 잘 안 될 때 대비: [Space]로 씨앗 심기.
@@ -147,12 +178,14 @@ window.addEventListener("keydown", (e) => {
   if (appState !== "playing") return;
   if (e.code !== "Space" || garden.phase !== "seed") return;
   e.preventDefault();
+  let planted: boolean;
   if (aimRight.present && aimGround(aimRight, _kbPlant)) {
-    garden.plantAt(_kbPlant);
+    planted = garden.plantAt(_kbPlant);
   } else {
     const n = garden.placedCount;
-    garden.plantAt(new THREE.Vector3((n - 1) * 1.6, 0, -3));
+    planted = garden.plantAt(new THREE.Vector3((n - 1) * 1.6, 0, -3));
   }
+  if (planted) sound.plant(); // 실제로 심겼을 때만 심기음
 });
 
 // [D] 손 뼈대 토글 / [H] 도움말 열고닫기 / [Esc] 도움말 닫기 / [R] 재시작 (게임 중에만)
@@ -181,7 +214,11 @@ function restart(): void {
   energy = 100;
   aimLeft.present = false;
   aimRight.present = false;
-  prevRightFire = false;
+  aimLeft.absent = 0;
+  aimRight.absent = 0;
+  plantCooldown = 0;
+  prevBeamR = false;
+  prevBeamL = false;
 }
 
 // PIP 창은 웹캠 로드 후 크기가 확정되므로 오버레이 캔버스도 그때 맞춘다.
@@ -191,6 +228,7 @@ window.addEventListener("resize", () => overlay.resize());
 type AppState = "intro" | "camera" | "playing";
 let appState: AppState = "intro";
 let startingGame = false;
+let mediaReady = false; // 웹캠+모델을 한 번 로드했는지(종료 후 재시작 시 즉시 복귀).
 
 const screens = new Screens({
   onStart: () => screens.show("camera"), // START → 카메라 권한 안내 화면
@@ -211,20 +249,58 @@ function setHelp(open: boolean): void {
 document.getElementById("btn-help-open")!.addEventListener("click", () => setHelp(true));
 document.getElementById("btn-help-close")!.addEventListener("click", () => setHelp(false));
 
+// --- 결과 화면 버튼(다시하기 / 종료) — 마우스 클릭 + 손 포인터(dwell) 공용 ---
+const btnResultRestart = document.getElementById("btn-result-restart")!;
+const btnResultQuit = document.getElementById("btn-result-quit")!;
+const resultButtons: HTMLElement[] = [btnResultRestart, btnResultQuit];
+const resultPointer = new PointerSelect(); // 조준점이 버튼 위에 머물면 자동 선택
+
+btnResultRestart.addEventListener("click", () => {
+  sound.unlock();
+  resultPointer.reset();
+  restart();
+});
+btnResultQuit.addEventListener("click", () => {
+  sound.unlock();
+  quit();
+});
+
+/** 종료: 게임 상태를 초기화하고 타이틀(인트로) 화면으로 돌아간다. */
+function quit(): void {
+  resultPointer.reset();
+  restart();
+  sound.stopAmbience(); // 타이틀로 돌아가면 배경 앰비언스 정지
+  appState = "intro";
+  screens.show("intro");
+}
+
 /** "게임 시작"에서 웹캠+모델을 로드한 뒤 실제 플레이로 진입. */
 async function startGame(): Promise<void> {
   if (startingGame || appState === "playing") return;
   startingGame = true;
   sound.unlock(); // 사용자 제스처(클릭) 시점에 오디오 컨텍스트 준비
+
+  // 종료 후 재시작: 웹캠·모델은 이미 로드돼 있으니 바로 플레이로 복귀.
+  if (mediaReady) {
+    restart();
+    appState = "playing";
+    screens.show("playing");
+    sound.startAmbience(); // 우주 앰비언스(배경)
+    startingGame = false;
+    return;
+  }
+
   screens.setBusy(true);
   screens.setStatus("카메라 준비 중…", "loading");
   try {
     await tracker.startWebcam(); // 웹캠 권한 요청 + 스트림
     await tracker.loadModel(); // MediaPipe HandLandmarker 로드
     overlay.resize();
+    mediaReady = true;
     appState = "playing";
     screens.setStatus("");
     screens.show("playing");
+    sound.startAmbience(); // 우주 앰비언스(배경)
     console.log("[화성 정원사] 준비 완료. 손을 화면에 비춰보세요.");
   } catch (err) {
     console.error("[화성 정원사] 카메라/모델 초기화 실패:", err);
@@ -271,21 +347,52 @@ function loop(now: number): void {
   updateAim(frame.right, aimRight, dt);
   crosshair.update(aimLeft, aimRight);
 
-  // 4) seed 단계: 오른손 발사 상승엣지에 조준점 지면에 씨앗을 심는다(플레이어가 위치 결정).
-  const rightFire = aimRight.present && aimRight.state === "FIRE";
-  if (
-    garden.phase === "seed" &&
-    rightFire &&
-    !prevRightFire &&
-    aimGround(aimRight, _plantPt)
-  ) {
-    garden.plantAt(_plantPt);
-  }
-  prevRightFire = rightFire;
+  // 결과 화면 표시 중에는 발사·심기를 멈추고, 손 조준점을 버튼 선택 커서로 쓴다.
+  const resultActive = garden.resultTier !== null;
 
-  // 5) 손동작 → 즉시 조준·발사. 오른손 = 시안 에너지, 왼손 = 붉은 방어. 둘 다 곤충 타격.
-  aimFire(aimRight, beamRight, originRight, dt);
-  aimFire(aimLeft, beamLeft, originLeft, dt);
+  plantCooldown -= dt;
+  if (!resultActive) {
+    // 4) seed 단계: FIRE 상태로 조준하면 씨앗을 심는다. 상승엣지(한 번의 깔끔한 트리거) 대신
+    //    짧은 쿨다운을 써서 감지가 조금 튀어도 잘 심기고, 손을 쓸며 씨앗을 뿌릴 수 있다.
+    //    같은 자리 중복 심기는 Garden의 간격 규칙(1.4)이 막아준다.
+    if (
+      garden.phase === "seed" &&
+      aimRight.present &&
+      aimRight.state === "FIRE" &&
+      plantCooldown <= 0 &&
+      aimGround(aimRight, _plantPt)
+    ) {
+      if (garden.plantAt(_plantPt)) {
+        sound.plant();
+        plantCooldown = 0.35;
+      }
+    }
+
+    // 5) 손동작 → 즉시 조준·발사. 오른손 = 시안 에너지(감자 성장 전용), 왼손 = 붉은 방어(곤충 격퇴 전용).
+    const beamR = aimFire(aimRight, beamRight, originRight, dt, false); // 오른손은 곤충 타격 안 함
+    const beamL = aimFire(aimLeft, beamLeft, originLeft, dt, true); //  왼손만 곤충 격퇴
+    // 빔 발사음: 매 프레임이 아니라 발사가 시작되는 순간(상승엣지)에만 한 번.
+    if (beamR && !prevBeamR) sound.beamFire("energy");
+    if (beamL && !prevBeamL) sound.beamFire("defense");
+    prevBeamR = beamR;
+    prevBeamL = beamL;
+  } else {
+    // 빔은 끄고 상태만 리셋(다시 게임하면 즉시 발사음).
+    beamRight.set(false, originRight, originRight);
+    beamLeft.set(false, originLeft, originLeft);
+    prevBeamR = prevBeamL = false;
+  }
+
+  // 결과 버튼(다시하기/종료)을 손 조준점으로 가리켜 선택. 오른손 우선, 없으면 왼손.
+  const ptr = aimRight.present ? aimRight : aimLeft.present ? aimLeft : null;
+  resultPointer.update(
+    resultActive,
+    ptr !== null,
+    ptr ? ptr.x * window.innerWidth : 0,
+    ptr ? ptr.y * window.innerHeight : 0,
+    resultButtons,
+    dt,
+  );
 
   // 에너지 미터: 오른손 분사 중엔 감소, 아니면 회복(연출용, 0~100 클램프).
   const emitting = aimRight.present && aimRight.state === "FIRE";
@@ -307,27 +414,33 @@ function loop(now: number): void {
   if (!fxSeed && garden.phase === "seed") {
     fxSeed = true;
     eventFx.play({ tone: "life", title: "감자를 발사하라!", sub: "오른손 트리거로 씨앗을 심어라" });
+    sound.event("life");
   }
   if (!fxCompost && garden.phase === "compost") {
     fxCompost = true;
     eventFx.play({ tone: "warn", title: "퇴비를 뿌려라!", sub: "감자밭에 영양을 공급한다" });
+    sound.event("warn");
   }
   if (!fxFirstBug && garden.threatsActive && bugs.count > 0) {
     fxFirstBug = true;
     eventFx.play({ tone: "danger", title: "외계 곤충 출현!", sub: "왼손 붉은 에너지로 격퇴하라!" });
+    sound.event("danger");
   }
   if (garden.phase === "energy") {
     if (!fx30 && garden.timeLeft <= 30) {
       fx30 = true;
       eventFx.play({ tone: "warn", title: "절반 지점!", sub: "30초 남았다 — 감자를 지켜라" });
+      sound.event("warn");
     }
     if (!fx10 && garden.timeLeft <= 10) {
       fx10 = true;
       eventFx.play({ tone: "danger", title: "마지막 10초!", sub: "끝까지 버텨라!" });
+      sound.event("danger");
     }
     if (!fxGrown && garden.potatoes.some((p) => p.grown)) {
       fxGrown = true;
       eventFx.play({ tone: "life", title: "감자 완전 성장!", sub: "화성에 생명이 뿌리내렸다" });
+      sound.event("life");
     }
   }
   }
@@ -346,7 +459,7 @@ pip.dataset.mode = "pip";
 
 // 개발 편의용 디버그 훅(프로덕션 번들에는 포함되지 않음).
 if (import.meta.env.DEV) {
-  (window as unknown as { __mars: unknown }).__mars = { mars, tracker, jets, beamRight, beamLeft, bugs, garden, gameHud, harvestFx, eventFx, screens, THREE };
+  (window as unknown as { __mars: unknown }).__mars = { mars, tracker, jets, beamRight, beamLeft, bugs, garden, gameHud, harvestFx, eventFx, screens, sound, resultPointer, resultButtons, THREE };
 }
 
 // 렌더 루프는 즉시 시작(인트로 화면 뒤로 화성 씬이 바로 보인다).

@@ -27,6 +27,12 @@ export class BugManager {
   // 에너지 단계 진입 전까지는 스폰하지 않는다(곤충은 에너지가 나올 때부터 등장).
   private enabled = false;
 
+  // 효과음 훅(main에서 연결). 갉아먹는 소리는 매 프레임이 아니라 주기적으로만 낸다.
+  onSpawn?: () => void; // 곤충 출현
+  onBite?: () => void; // 곤충이 감자를 갉아먹음(throttle됨)
+  onKill?: () => void; // 곤충이 빔에 격파됨
+  private biteTimer = 0;
+
   constructor(
     private readonly scene: THREE.Scene,
     private readonly potatoes: Potato[],
@@ -47,6 +53,7 @@ export class BugManager {
     this.spawnTimer = 1.0;
     this.failed = false;
     this.enabled = false;
+    this.biteTimer = 0;
   }
 
   get count(): number {
@@ -102,6 +109,7 @@ export class BugManager {
     const bug = new Bug(groundPos, "sand");
     this.scene.add(bug.group);
     this.bugs.push(bug);
+    this.onSpawn?.();
   }
 
   update(dt: number): void {
@@ -120,6 +128,7 @@ export class BugManager {
     }
 
     // 이동 + 감자 공격
+    let anyAttacking = false;
     for (const bug of this.bugs) {
       const target = this.nearestPotato(bug.position);
       if (!target) {
@@ -140,6 +149,7 @@ export class BugManager {
       } else {
         attacking = !bug.isEmerging() && dist < bug.attackRadius;
         if (attacking) {
+          anyAttacking = true;
           if (target.growth > 0) {
             // 잎·감자알을 갉아먹어 성장 퍼센트가 되돌아간다(다 자란 감자도 방치하면 깎임).
             target.growth = Math.max(0, target.growth - this.growthLossPerSec * dt);
@@ -151,6 +161,17 @@ export class BugManager {
         }
       }
       bug.update(dt, target.position, attacking);
+    }
+
+    // 갉아먹는 소리: 곤충이 하나라도 공격 중이면 일정 간격으로만 낸다(매 프레임 X).
+    if (anyAttacking) {
+      this.biteTimer -= dt;
+      if (this.biteTimer <= 0) {
+        this.onBite?.();
+        this.biteTimer = 0.33;
+      }
+    } else {
+      this.biteTimer = 0; // 다시 물면 즉시 소리
     }
 
     // 소멸 처리
@@ -180,7 +201,11 @@ export class BugManager {
     for (const bug of this.bugs) {
       if (bug.removeMe) continue;
       const d = pointToSegment(bug.position, start, this._end, this._p);
-      if (d < bug.hitRadius) bug.damage(amount);
+      if (d < bug.hitRadius) {
+        const wasAlive = bug.health > 0;
+        bug.damage(amount);
+        if (wasAlive && bug.health <= 0) this.onKill?.(); // 이 타격으로 격파됨
+      }
     }
   }
 }
