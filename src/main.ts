@@ -485,7 +485,8 @@ function loop(now: number): void {
   const frame = tracker.detect(now);
 
   // 손 좌표를 콘솔에 출력(1단계 완료 기준). 매 프레임은 과하므로 ~0.4초 간격.
-  if (frame.hands.length > 0 && now - lastLog > 400) {
+  // 개발 중에만 — 배포 번들에서는 콘솔을 더럽히지 않도록 DEV로 게이트.
+  if (import.meta.env.DEV && frame.hands.length > 0 && now - lastLog > 400) {
     lastLog = now;
     for (const h of frame.hands) {
       const w = h.landmarks[0];
