@@ -6,6 +6,9 @@ import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { VignetteShader } from "three/examples/jsm/shaders/VignetteShader.js";
 import { MarsEnvironment } from "./environment/MarsEnvironment";
+import { layout, type RegionName } from "../view/layout";
+
+const WORLD_UP = new THREE.Vector3(0, 1, 0);
 
 /**
  * 화성 메인 3D 공간.
@@ -18,6 +21,20 @@ export class MarsScene {
   readonly camera: THREE.PerspectiveCamera;
   readonly renderer: THREE.WebGLRenderer;
   readonly env: MarsEnvironment;
+
+  // 메타존(4면) 모드용 보조 카메라: 정면 카메라와 같은 눈 위치에서
+  // 좌(-X)·우(+X)·바닥(-Y)을 바라본다. 일반 모드에서는 쓰이지 않는다.
+  readonly camLeft: THREE.PerspectiveCamera;
+  readonly camRight: THREE.PerspectiveCamera;
+  readonly camFloor: THREE.PerspectiveCamera;
+  private readonly _qYaw = new THREE.Quaternion();
+
+  /**
+   * 메타존에서 4면 서라운드로 그릴지 여부(플레이·연습 중에만 true).
+   * false면(인트로·플레이 방법 안내) 화면을 전부 검게 비워 양옆이 검정이 되고,
+   * 안내 UI는 가운데에 일반 전체 화면으로 얹힌다.
+   */
+  surround = false;
 
   // [2단계] 포스트프로세싱 파이프라인
   private composer!: EffectComposer;
@@ -47,6 +64,12 @@ export class MarsScene {
     );
     this.camera.position.set(0, 1.75, 3.6);
     this.camera.lookAt(0, 0.2, -2.5);
+
+    // 메타존 보조 카메라(좌·우·바닥). 방향/종횡비는 syncMetaCameras에서 맞춘다.
+    this.camLeft = new THREE.PerspectiveCamera(55, 1, 0.1, 600);
+    this.camRight = new THREE.PerspectiveCamera(55, 1, 0.1, 600);
+    this.camFloor = new THREE.PerspectiveCamera(55, 1, 0.1, 600);
+    this.syncMetaCameras();
 
     // --- 화성 환경 전체(하늘·지형·바위·에덴 돔·먼지·조명) ---
     this.env = new MarsEnvironment(this.scene);
@@ -102,11 +125,88 @@ export class MarsScene {
   private onResize(): void {
     const w = window.innerWidth;
     const h = window.innerHeight;
-    this.camera.aspect = w / h;
-    this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
     this.composer.setSize(w, h);
     this.bloomPass.setSize(w, h);
+    layout.recompute();
+    if (layout.meta) {
+      this.syncMetaCameras();
+    } else {
+      this.camera.aspect = w / h;
+      this.camera.updateProjectionMatrix();
+    }
+  }
+
+  /**
+   * 메타존 모드 켜기/끄기. body.meta 클래스로 오버레이가 정면으로 모이고,
+   * 렌더 경로가 4면 뷰포트 분할로 바뀐다. 되돌리면 완전히 원래대로 복귀한다.
+   */
+  applyMeta(on: boolean): void {
+    layout.meta = on;
+    document.body.classList.toggle("meta", on);
+    this.onResize();
+  }
+
+  /**
+   * 보조 카메라를 정면 카메라 기준으로 정렬한다.
+   *  - 좌/우: 정면 시선을 월드 Y축 기준 ±90° 회전(같은 하강 피치 유지).
+   *  - 바닥: 발밑을 수직으로 내려다보되, 화면 위쪽이 정면(-Z)이 되도록 up을 둔다.
+   *  - 각 면 종횡비는 해당 패널 폭÷높이.
+   */
+  private syncMetaCameras(): void {
+    const pos = this.camera.position;
+
+    this.camLeft.position.copy(pos);
+    this.camRight.position.copy(pos);
+    this._qYaw.setFromAxisAngle(WORLD_UP, Math.PI / 2); // +90° → 왼쪽(-X)
+    this.camLeft.quaternion.copy(this.camera.quaternion).premultiply(this._qYaw);
+    this._qYaw.setFromAxisAngle(WORLD_UP, -Math.PI / 2); // -90° → 오른쪽(+X)
+    this.camRight.quaternion.copy(this.camera.quaternion).premultiply(this._qYaw);
+
+    this.camFloor.position.copy(pos);
+    this.camFloor.up.set(0, 0, -1); // 앞쪽(-Z)이 바닥 화면의 위로 오게
+    this.camFloor.lookAt(pos.x, pos.y - 1, pos.z);
+
+    if (layout.meta) {
+      this.camera.aspect = layout.aspect("front");
+      this.camLeft.aspect = layout.aspect("left");
+      this.camRight.aspect = layout.aspect("right");
+      this.camFloor.aspect = layout.aspect("floor");
+      for (const c of [this.camera, this.camLeft, this.camRight, this.camFloor]) {
+        c.updateProjectionMatrix();
+      }
+    }
+  }
+
+  /** [메타존] 하나의 긴 화면을 좌·정면·우·바닥 4개 뷰포트로 나눠 그린다. */
+  private renderMeta(): void {
+    const r = this.renderer;
+    // 창 전체를 검게 지운다(서라운드 레터박스 여백 + 안내 상태의 양옆·전체 검정).
+    r.setScissorTest(false);
+    r.setViewport(0, 0, window.innerWidth, window.innerHeight);
+    r.setClearColor(0x000000, 1);
+    r.clear();
+
+    // 인트로·플레이 방법 안내(비-서라운드): 3D를 그리지 않고 전부 검정으로 둔다.
+    // 안내 UI는 가운데에 일반 전체 화면으로 얹히므로 양옆이 검정이 된다.
+    if (!this.surround) return;
+
+    // 플레이·연습 중: 하나의 긴 화면을 좌·정면·우·바닥 4개 뷰포트로 나눠 그린다.
+    const cams: [RegionName, THREE.PerspectiveCamera][] = [
+      ["left", this.camLeft],
+      ["front", this.camera],
+      ["right", this.camRight],
+      ["floor", this.camFloor],
+    ];
+    r.setScissorTest(true);
+    for (const [name, cam] of cams) {
+      const rc = layout.regions[name];
+      r.setViewport(rc.x, rc.y, rc.w, rc.h);
+      r.setScissor(rc.x, rc.y, rc.w, rc.h);
+      r.render(this.scene, cam);
+    }
+    r.setScissorTest(false);
+    r.setViewport(0, 0, window.innerWidth, window.innerHeight);
   }
 
   /** 매 프레임 환경 애니메이션(먼지·모래·위성·스파크). */
@@ -115,7 +215,12 @@ export class MarsScene {
   }
 
   render(): void {
-    // 렌더러 대신 컴포저를 통해 렌더링(Bloom·비네팅·톤매핑 적용).
-    this.composer.render();
+    if (layout.meta) {
+      // 메타존: 4면 뷰포트 직접 렌더(포스트프로세싱은 정면 한 화면 전제라 이 모드에선 생략).
+      this.renderMeta();
+    } else {
+      // 렌더러 대신 컴포저를 통해 렌더링(Bloom·비네팅·톤매핑 적용).
+      this.composer.render();
+    }
   }
 }

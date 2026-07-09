@@ -3,6 +3,14 @@
   --hud-blue: #46c8ff;
   --hud-red: #ff6a4d;
   --hud-dim: rgba(255, 233, 214, 0.55);
+  /* 메타존 정면 영역(가운데 패널)의 화면상 위치·크기 — layout.ts가 갱신한다.
+     기본값은 창 전체(일반 모드)로 둔다. */
+  --front-x: 0px;
+  --front-y: 0px;
+  --front-w: 100vw;
+  --front-h: 100vh;
+  --front-right: 0px;
+  --front-bottom: 0px;
 }
 
 * {
@@ -1354,4 +1362,55 @@ body[data-screen="playing"] #game-bar {
   .howto-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ==========================================================================
+   메타존(4면) 모드 — body.meta 일 때만.
+   3D 씬은 캔버스에서 좌·정면·우·바닥 4개 뷰포트로 나뉘어 그려지고,
+   모든 UI(HUD·크로스헤어·게이지·오버레이·안내 화면)는 가운데 '정면' 영역으로 모은다.
+   좌/우/바닥 영역에는 UI 없이 3D 배경만 보이게 된다.
+   (일반 모드에서는 이 규칙이 적용되지 않으므로 기존 레이아웃 그대로다.)
+   ========================================================================== */
+
+/* 플레이 UI 래퍼(#play-ui). 일반 모드에서는 존재감이 없다(display:contents →
+   자식들이 기존처럼 뷰포트 기준으로 그대로 동작). */
+#play-ui {
+  display: contents;
+}
+
+/* 메타존: 래퍼를 정면 패널 위치에 두고, 설계 해상도(2020×1200)를 정면 패널 크기로
+   통째로 축소(scale)한다. transform 이 걸린 요소는 자식 position:fixed 의 기준(containing
+   block)이 되므로, 자식들(#hud inset:0, 가운데 타이머 left:50%, #game-bar top:126px,
+   우하단 PIP right/bottom:18px 등)은 '원래 좌표'를 그대로 둔 채 한꺼번에 작아진다.
+   → "원래 전체화면 UI가 그대로 정면 패널만큼 축소된" 배치가 된다.
+   인트로·플레이 방법 안내·도움말(.screen)은 래퍼 밖이라 영향 없음(전체 화면 유지). */
+body.meta #play-ui {
+  display: block;
+  position: fixed;
+  left: var(--front-x);
+  top: var(--front-y);
+  width: var(--design-w);
+  height: var(--design-h);
+  transform: scale(var(--front-scale));
+  transform-origin: top left;
+}
+
+/* 인트로·플레이 방법 안내·도움말도 정면 패널 크기로 축소 배치한다.
+   설계 박스(2020×1200)를 정면 패널에 맞춰 통째로 scale → 원래 안내 화면이 그대로
+   가운데(전면)에 작게 들어가고, 양옆·위·아래는 3D가 검정이라 검게 남는다.
+   (플레이 UI(#play-ui)와 완전히 같은 축소 방식. 설계 박스 안에 다 들어가 스크롤 없음.) */
+body.meta .screen {
+  left: var(--front-x);
+  top: var(--front-y);
+  width: var(--design-w);
+  height: var(--design-h);
+  right: auto;
+  bottom: auto;
+  transform: scale(var(--front-scale));
+  transform-origin: top left;
+}
+/* 인트로 아트 무대: 뷰포트(vw/vh) 대신 설계 박스 기준으로 크기를 잡아야
+   축소(scale) 후에도 정면 패널을 꽉 채운다. */
+body.meta .intro-stage {
+  width: min(var(--design-w), calc(var(--design-h) * 1376 / 768));
 }

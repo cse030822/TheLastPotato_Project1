@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { Garden } from "./Garden";
+import { layout } from "../view/layout";
 
 /** 원형 링 반지름(뷰박스 44 기준) → 둘레(스트로크 대시). */
 const RING_R = 19;
@@ -110,9 +111,12 @@ export class GameHUD {
               : "오른손 트리거로 에너지 분사 → 감자를 키우세요! 왼손으로 곤충 격퇴."
             : "[R] 키로 다시 시작.";
 
-    // 감자별 원형 링(월드→화면 투영)
-    const w = window.innerWidth;
-    const h = window.innerHeight;
+    // 감자별 원형 링(월드→화면 투영).
+    // 게이지 레이어(#potato-gauges)는 UI 설계 좌표계(메타존이면 2020×1200)에 그려지고,
+    // 메타존에서는 래퍼(#play-ui)가 통째로 축소되므로 여기선 설계 좌표계 기준으로 매핑한다.
+    // 일반 모드에서는 창 전체와 동일.
+    const w = layout.uiWidth;
+    const h = layout.uiHeight;
     const pots = garden.potatoes;
     for (let i = 0; i < this.gauges.length; i++) {
       if (i >= pots.length) this.gauges[i].root.style.display = "none";

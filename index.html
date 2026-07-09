@@ -9,6 +9,11 @@
     <!-- 3D 화성 공간이 렌더링되는 메인 캔버스 -->
     <canvas id="scene"></canvas>
 
+    <!-- 플레이 화면 UI 묶음. 메타존에서는 이 래퍼 하나를 정면 패널 크기에 맞춰
+         축소(scale)해서 "원래 전체화면 UI가 그대로 작아진" 것처럼 배치한다.
+         일반 모드에서는 display:contents 라 아무 영향이 없다(자식들이 기존처럼 뷰포트 기준). -->
+    <div id="play-ui">
+
     <!-- 웹캠 + 손 뼈대 오버레이 (2단계: 전체화면 / 3단계 이후: 우하단 PIP) -->
     <div id="cam-pip">
       <video id="webcam" playsinline muted></video>
@@ -144,6 +149,8 @@
         <div id="result-hint">손으로 버튼을 가리키면 선택됩니다 · [R] 다시 시작</div>
       </div>
     </div>
+
+    </div><!-- /#play-ui : 플레이 UI 묶음 끝 -->
 
     <!-- 인트로(타이틀) 화면: 제목이 포함된 아트워크 배경 + START 버튼 -->
     <div id="intro-screen" class="screen intro-screen">

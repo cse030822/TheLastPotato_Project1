@@ -15,6 +15,7 @@ import { HarvestFx } from "./game/HarvestFx";
 import { Sound } from "./game/Sound";
 import { Screens } from "./game/Screens";
 import { PointerSelect } from "./game/PointerSelect";
+import { layout } from "./view/layout";
 import * as THREE from "three";
 
 // --- DOM 참조 ---
@@ -25,6 +26,14 @@ const pip = document.getElementById("cam-pip") as HTMLDivElement;
 
 // --- 모듈 구성 ---
 const mars = new MarsScene(sceneCanvas);
+
+// 메타존(4면 몰입형 디스플레이) 모드.
+//  - 주소에 ?meta 를 붙이면 켜진 채로 시작(예: http://localhost:5173/?meta ).
+//  - 플레이 중 언제든 [M] 키로 켜고 끌 수 있다. 기본은 꺼짐(정면 한 화면).
+mars.applyMeta(new URLSearchParams(location.search).has("meta"));
+window.addEventListener("keydown", (e) => {
+  if (e.key.toLowerCase() === "m") mars.applyMeta(!layout.meta);
+});
 const tracker = new HandTracker(video);
 const overlay = new HandSkeletonOverlay(overlayCanvas, video);
 const hud = new HUD();
@@ -533,8 +542,11 @@ function loop(now: number): void {
 
   // 결과 버튼(다시하기/종료)을 손 조준점으로 가리켜 선택. 오른손 우선, 없으면 왼손.
   const ptr = aimRight.present ? aimRight : aimLeft.present ? aimLeft : null;
-  const ptrX = ptr ? ptr.x * window.innerWidth : 0;
-  const ptrY = ptr ? ptr.y * window.innerHeight : 0;
+  // 조준점(0~1)을 정면 영역의 실제 화면 픽셀로 변환(메타존에서는 가운데 영역).
+  // 버튼은 정면 영역에 모여 있고 dwell 선택은 getBoundingClientRect(실좌표)로 판정하므로,
+  // 여기서도 정면 영역 기준으로 매핑해야 커서와 버튼이 맞는다. 일반 모드면 창 전체와 동일.
+  const ptrX = ptr ? layout.front.x + ptr.x * layout.front.w : 0;
+  const ptrY = ptr ? layout.front.y + ptr.y * layout.front.h : 0;
   resultPointer.update(resultActive, ptr !== null, ptrX, ptrY, resultButtons, dt);
   // 연습 중에는 조준점으로 하단 바 버튼(실전 시작/나가기)을 손으로 가리켜 선택.
   practicePointer.update(appState === "practice", ptr !== null, ptrX, ptrY, practiceButtons, dt);
@@ -595,6 +607,10 @@ function loop(now: number): void {
 
   // 화성 환경 애니메이션(먼지·모래 폭포·위성·스파크) — 배경으로 항상 갱신
   mars.update(dt);
+
+  // 메타존: 플레이·연습 중에만 4면 서라운드로 그린다.
+  // 인트로·플레이 방법 안내에서는 양옆(사실상 전체)이 검정 + 가운데 UI만.
+  mars.surround = appState === "playing" || appState === "practice";
 
   // 렌더
   mars.render();
