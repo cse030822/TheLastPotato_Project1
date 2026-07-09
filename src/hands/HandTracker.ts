@@ -6,7 +6,7 @@ import {
 import { type Landmark } from "./handConstants";
 import {
   GestureFilter,
-  classifyInstant,
+  GunGesture,
   type HandReading,
   type HandSide,
 } from "./gestures";
@@ -34,6 +34,11 @@ export class HandTracker {
   private readonly filters: Record<HandSide, GestureFilter> = {
     left: new GestureFilter(),
     right: new GestureFilter(),
+  };
+  // 좌/우 손 각각의 '두 손가락 총' 제스처 판정(적응형 트리거 상태 유지).
+  private readonly gestures: Record<HandSide, GunGesture> = {
+    left: new GunGesture(),
+    right: new GunGesture(),
   };
   // 좌/우 손 각각의 관절 좌표 스무딩(One Euro).
   private readonly smoothers: Record<HandSide, HandSmoother> = {
@@ -150,13 +155,14 @@ export class HandTracker {
       const rawLm = chosen[side];
       if (!rawLm) {
         this.smoothers[side].markAbsent();
+        this.gestures[side].reset(); // 손 사라짐 → 트리거 기준 초기화
         this.filters[side].update("IDLE"); // 손 사라짐 → 노즐 복귀
         return null;
       }
       const lm = this.smoothers[side].smooth(rawLm, tSec); // 지터 제거
       const screenX = 1 - lm[9].x;
       const screenY = lm[9].y;
-      const state = this.filters[side].update(classifyInstant(lm));
+      const state = this.filters[side].update(this.gestures[side].update(lm));
       return { side, state, screenX, screenY, landmarks: lm };
     };
 
