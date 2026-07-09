@@ -175,7 +175,7 @@ function aimFire(
 // 오른손 조준 위치가 있으면 그곳, 없으면 앞쪽에 순서대로 벌려 심는다.
 const _kbPlant = new THREE.Vector3();
 window.addEventListener("keydown", (e) => {
-  if (appState !== "playing") return;
+  if (appState !== "playing" && appState !== "practice") return;
   if (e.code !== "Space" || garden.phase !== "seed") return;
   e.preventDefault();
   let planted: boolean;
@@ -188,12 +188,18 @@ window.addEventListener("keydown", (e) => {
   if (planted) sound.plant(); // 실제로 심겼을 때만 심기음
 });
 
-// [D] 손 뼈대 토글 / [H] 도움말 열고닫기 / [Esc] 도움말 닫기 / [R] 재시작 (게임 중에만)
+// [D] 손 뼈대 토글 / [H] 도움말 열고닫기 / [Esc] 도움말 닫기 / [R] 재시작 (게임·연습 중)
+// 연습 모드 추가: [Enter] 실전 시작 / [Esc]로 도움말이 안 열려 있으면 연습 종료(→ 인트로)
 window.addEventListener("keydown", (e) => {
-  if (appState !== "playing") return;
+  if (appState !== "playing" && appState !== "practice") return;
   sound.unlock(); // 첫 사용자 제스처에서 오디오 컨텍스트 준비
   if (e.key === "Escape") {
-    setHelp(false);
+    if (helpOpen) setHelp(false);
+    else if (appState === "practice") quit(); // 연습 중 Esc(도움말 닫힘) → 나가기
+    return;
+  }
+  if (appState === "practice" && e.key === "Enter") {
+    void startGame(); // 연습 → 실전 시작
     return;
   }
   const k = e.key.toLowerCase();
@@ -225,7 +231,7 @@ function restart(): void {
 window.addEventListener("resize", () => overlay.resize());
 
 // --- 화면 상태(인트로 → 카메라 권한 → 게임) ---
-type AppState = "intro" | "camera" | "playing";
+type AppState = "intro" | "camera" | "playing" | "practice";
 let appState: AppState = "intro";
 let startingGame = false;
 let mediaReady = false; // 웹캠+모델을 한 번 로드했는지(종료 후 재시작 시 즉시 복귀).
@@ -239,6 +245,7 @@ const screens = new Screens({
   onBack: () => screens.show("intro"),
   onAllowCamera: () => void startGame(), // 카메라 권한 화면에서 실제 권한 요청 + 플레이 진입
   onRefreshCameras: () => void refreshCameras(), // "카메라 찾기" — 권한 허용 후 목록 채우기
+  onPractice: () => void startPractice(), // "먼저 연습하기" — 압박 없는 연습 모드 진입
 });
 screens.show("intro");
 sound.playMenuMusic(); // 인트로·카메라 배경음악(후보 2) — 자동재생이 되면 즉시 재생
@@ -325,22 +332,20 @@ btnResultQuit.addEventListener("click", () => {
 function quit(): void {
   resultPointer.reset();
   restart();
+  garden.practice = false; // 연습 모드였다면 해제
   sound.playMenuMusic(); // 타이틀로 돌아가면 메뉴 배경음악(후보 2)으로 복귀
   appState = "intro";
   screens.show("intro");
 }
 
-/** "게임 시작"에서 웹캠+모델을 로드한 뒤 실제 플레이로 진입. */
-async function startGame(): Promise<void> {
-  if (startingGame || appState === "playing") return;
-  startingGame = true;
-  sound.unlock(); // 사용자 제스처(클릭) 시점에 오디오 컨텍스트 준비
-
-  const wantId = screens.selectedCameraId; // 사용자가 고른 카메라(빈 문자열=기본)
-
-  // 종료 후 재시작: 웹캠·모델은 이미 로드돼 있으니 바로 플레이로 복귀.
-  // 단, 다른 카메라를 새로 골랐다면 그 카메라로 스트림만 교체한다.
+/**
+ * 웹캠+모델을 확보한다(이미 로드했으면 즉시, 다른 카메라를 골랐으면 스트림만 교체).
+ * "게임 시작"과 "연습하기"가 공유한다.
+ * @returns 준비 성공 여부. 실패 시 카메라 화면에 에러를 남긴다.
+ */
+async function ensureMedia(wantId: string): Promise<boolean> {
   if (mediaReady) {
+    // 이미 로드됨: 다른 카메라를 새로 골랐다면 그 카메라로 스트림만 교체.
     if (wantId && wantId !== tracker.deviceId) {
       screens.setBusy(true);
       screens.setStatus("카메라 전환 중…", "loading");
@@ -352,19 +357,12 @@ async function startGame(): Promise<void> {
         console.error("[화성 정원사] 카메라 전환 실패:", err);
         screens.setStatus("선택한 카메라를 열 수 없습니다. 다른 카메라를 선택해 주세요.", "error");
         screens.setBusy(false);
-        startingGame = false;
-        return;
+        return false;
       }
       screens.setBusy(false);
     }
-    restart();
-    appState = "playing";
-    screens.show("playing");
-    sound.playGameMusic(); // 플레이 배경음악(후보 1)
-    startingGame = false;
-    return;
+    return true;
   }
-
   screens.setBusy(true);
   screens.setStatus("카메라 준비 중…", "loading");
   try {
@@ -372,11 +370,8 @@ async function startGame(): Promise<void> {
     await tracker.loadModel(); // MediaPipe HandLandmarker 로드
     overlay.resize();
     mediaReady = true;
-    appState = "playing";
     screens.setStatus("");
-    screens.show("playing");
-    sound.playGameMusic(); // 플레이 배경음악(후보 1)
-    console.log("[화성 정원사] 준비 완료. 손을 화면에 비춰보세요.");
+    return true;
   } catch (err) {
     console.error("[화성 정원사] 카메라/모델 초기화 실패:", err);
     screens.setStatus(
@@ -384,10 +379,51 @@ async function startGame(): Promise<void> {
       "error",
     );
     screens.setBusy(false);
-  } finally {
-    startingGame = false;
+    return false;
   }
 }
+
+/** "게임 시작"/"실전 시작"에서 웹캠+모델을 확보한 뒤 실제 플레이로 진입. */
+async function startGame(): Promise<void> {
+  if (startingGame || appState === "playing") return;
+  startingGame = true;
+  sound.unlock(); // 사용자 제스처(클릭) 시점에 오디오 컨텍스트 준비
+  const ok = await ensureMedia(screens.selectedCameraId);
+  if (ok) {
+    restart();
+    garden.practice = false;
+    appState = "playing";
+    screens.show("playing");
+    sound.playGameMusic(); // 플레이 배경음악(후보 1)
+  }
+  startingGame = false;
+}
+
+/** "먼저 연습하기"에서 웹캠+모델을 확보한 뒤 압박 없는 연습 모드로 진입. */
+async function startPractice(): Promise<void> {
+  if (startingGame || appState === "practice") return;
+  startingGame = true;
+  sound.unlock();
+  const ok = await ensureMedia(screens.selectedCameraId);
+  if (ok) {
+    restart();
+    garden.practice = true; // 타이머·승패 판정 정지(무한 연습) + 곤충 미등장
+    appState = "practice";
+    screens.show("practice");
+    sound.playGameMusic();
+  }
+  startingGame = false;
+}
+
+// 연습 모드 하단 바 버튼: 실전 시작 / 나가기.
+document.getElementById("btn-practice-start")!.addEventListener("click", () => {
+  sound.unlock();
+  void startGame();
+});
+document.getElementById("btn-practice-exit")!.addEventListener("click", () => {
+  sound.unlock();
+  quit();
+});
 
 let prev = performance.now();
 let lastLog = 0;
@@ -396,9 +432,9 @@ function loop(now: number): void {
   const dt = Math.min(0.05, (now - prev) / 1000);
   prev = now;
 
-  // 게임 플레이 갱신은 실제 플레이 중이면서 도움말이 닫혀 있을 때만.
+  // 게임 플레이 갱신은 실제 플레이·연습 중이면서 도움말이 닫혀 있을 때만.
   // (인트로/카메라/도움말 화면에서는 화성 씬만 배경으로 렌더되고 게임은 멈춘다.)
-  if (appState === "playing" && !helpOpen) {
+  if ((appState === "playing" || appState === "practice") && !helpOpen) {
   // 1) 손 감지 + 제스처 상태
   const frame = tracker.detect(now);
 
@@ -477,7 +513,8 @@ function loop(now: number): void {
   garden.update(dt, beamRight);
 
   // 7) 곤충 웨이브. 퇴비(compost) 단계부터 스폰 활성화.
-  bugs.setEnabled(garden.threatsActive);
+  //    연습 모드에서는 곤충을 등장시키지 않는다(감자 심기·키우기 훈련만).
+  bugs.setEnabled(garden.threatsActive && appState !== "practice");
   bugs.update(dt);
 
   // 8) 수확 입자 연출 + 게임 HUD(목표·타이머·WAVE·에너지·성장 링·조작·결과).

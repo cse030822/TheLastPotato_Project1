@@ -86,6 +86,14 @@
     <!-- 게임 중 이벤트 이팩트(곤충 출현·시간 기점·완전 성장) — 게임을 멈추지 않는 연출 -->
     <div id="event-fx" aria-hidden="true"></div>
 
+    <!-- 연습 모드 하단 바: 타이머·패배 없는 자유 연습 안내 + 실전 시작/나가기 -->
+    <div id="practice-bar">
+      <span class="pb-tag">🎯 연습 모드</span>
+      <span class="pb-hint">곤충 없이 감자를 자유롭게 심고 키우는 연습을 하세요. 시간·패배 없음.</span>
+      <button id="btn-practice-start" class="pb-btn pb-primary" type="button">▶ 실전 시작</button>
+      <button id="btn-practice-exit" class="pb-btn" type="button">‹ 나가기</button>
+    </div>
+
     <!-- 승리/패배 결과 오버레이(완전 성공 / 부분 성공 / 실패 등급별) -->
     <div id="result-overlay">
       <div id="result-card">
@@ -220,6 +228,7 @@
         </div>
         <div class="screen-buttons">
           <button id="btn-allow" class="btn btn-primary" type="button">📷 카메라 켜고 시작하기</button>
+          <button id="btn-practice" class="btn btn-ghost" type="button">🎯 먼저 연습하기</button>
           <button id="btn-cam-back" class="btn btn-ghost" type="button">‹ 뒤로</button>
         </div>
         <div id="camera-status" class="screen-status"></div>

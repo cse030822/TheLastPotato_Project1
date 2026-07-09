@@ -1,10 +1,11 @@
-export type ScreenState = "intro" | "camera" | "playing";
+export type ScreenState = "intro" | "camera" | "playing" | "practice";
 
 interface ScreenHandlers {
   onStart: () => void; // 인트로 START → 카메라 권한 화면으로
   onBack: () => void; // 카메라 화면 "뒤로"(→ 인트로)
   onAllowCamera: () => void; // 카메라 권한 화면의 "카메라 켜고 시작하기"
   onRefreshCameras: () => void; // "카메라 찾기"(권한 허용 후 목록 채우기)
+  onPractice: () => void; // "먼저 연습하기"(→ 연습 모드)
 }
 
 /**
@@ -32,6 +33,7 @@ export class Screens {
     this.allowBtn.addEventListener("click", handlers.onAllowCamera);
     this.refreshBtn.addEventListener("click", handlers.onRefreshCameras);
     document.getElementById("btn-cam-back")!.addEventListener("click", handlers.onBack);
+    document.getElementById("btn-practice")!.addEventListener("click", handlers.onPractice);
   }
 
   /** 현재 선택된 카메라 deviceId(빈 문자열이면 기본 카메라). */

@@ -51,6 +51,8 @@ export class Garden {
   resultTier: "perfect" | "partial" | "fail" | null = null;
   /** 종료 시점 살아남은 감자 수(결과 문구·통계용). */
   survivors = 0;
+  /** 연습 모드: 타이머와 승패 판정을 멈춘다(무한 연습). main이 진입 시 설정. */
+  practice = false;
 
   /** 감자알이 새로 돋을 때(월드 좌표) 호출 — 수확 연출·사운드용. main이 주입. */
   onHarvest: ((worldPos: THREE.Vector3) => void) | null = null;
@@ -222,7 +224,8 @@ export class Garden {
     }
 
     // 타이머는 곤충이 등장하는 퇴비 단계부터(퇴비·에너지 관통) 게임 종료 전까지 흐른다.
-    if (this.timerStarted && !this.ended) this.missionElapsed += dt;
+    // 연습 모드에서는 시간이 흐르지 않아 카운트다운·승패가 발생하지 않는다.
+    if (this.timerStarted && !this.ended && !this.practice) this.missionElapsed += dt;
 
     // 에너지 공급 판정. 보호막(glowing)은 남은 shield 시간으로 유지된다.
     //  - 매 프레임 shield를 흘려보내고(glowing = shield>0),
@@ -260,7 +263,7 @@ export class Garden {
     //  - 완전 성공(perfect): 3그루 모두 생존, 또는 3그루 모두 100% 성장 — 즉시
     //  - 부분 성공(partial): 60초를 버텼고 1~2그루 생존 — 실패가 아닌 보상 결과
     //  - 실패(fail): 감자가 모두 파괴됨
-    if (!this.ended && this.phase === "energy") {
+    if (!this.ended && this.phase === "energy" && !this.practice) {
       const survivors = this.potatoes.filter((p) => p.alive).length;
       const allGrown =
         this.potatoes.length === this.maxPotatoes &&

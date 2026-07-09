@@ -843,11 +843,81 @@ body {
    ========================================================================== */
 
 /* playing 상태가 아니면 게임 플레이 UI(HUD·크로스헤어·PIP·게이지)를 숨긴다. */
-body:not([data-screen="playing"]) #hud,
-body:not([data-screen="playing"]) #crosshairs,
-body:not([data-screen="playing"]) #cam-pip,
-body:not([data-screen="playing"]) #potato-gauges {
+/* 플레이·연습 화면에서만 게임 UI(HUD·크로스헤어·PIP·게이지)를 보인다. */
+body:not([data-screen="playing"]):not([data-screen="practice"]) #hud,
+body:not([data-screen="playing"]):not([data-screen="practice"]) #crosshairs,
+body:not([data-screen="playing"]):not([data-screen="practice"]) #cam-pip,
+body:not([data-screen="playing"]):not([data-screen="practice"]) #potato-gauges {
   display: none !important;
+}
+
+/* 연습 모드 하단 바: 기본 숨김, 연습 화면에서만 표시. */
+#practice-bar {
+  display: none;
+}
+body[data-screen="practice"] #practice-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  z-index: 25;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(14, 7, 5, 0.82);
+  border: 1px solid rgba(125, 255, 146, 0.3);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  max-width: min(92vw, 720px);
+}
+.pb-tag {
+  font-weight: 800;
+  color: #7dff92;
+  white-space: nowrap;
+}
+.pb-hint {
+  font-size: 13px;
+  color: var(--hud-dim);
+  line-height: 1.4;
+}
+.pb-btn {
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 14px;
+  white-space: nowrap;
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 233, 214, 0.28);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--hud-fg);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.pb-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+.pb-primary {
+  border-color: rgba(125, 255, 146, 0.55);
+  background: rgba(125, 255, 146, 0.16);
+  color: #d6ffde;
+}
+.pb-primary:hover {
+  background: rgba(125, 255, 146, 0.28);
+}
+
+/* 연습 모드에서는 점수·시간 관련 패널을 감춰 '무한 연습'임을 분명히 한다. */
+body[data-screen="practice"] #objective,
+body[data-screen="practice"] #timer-pill,
+body[data-screen="practice"] #wave-panel {
+  display: none !important;
+}
+
+@media (max-width: 560px) {
+  .pb-hint {
+    display: none;
+  }
 }
 
 .screen {
@@ -873,6 +943,18 @@ body:not([data-screen="playing"]) #potato-gauges {
   visibility: visible;
   pointer-events: auto;
 }
+/* 플레이 방법 안내(게임 전) · 도움말(게임 중) 화면 배경:
+   게임 콘셉트를 담은 시네마틱 아트(돔 속 새싹 + 다가오는 곤충)를 깔고,
+   그 위에 어두운 스크림을 얹어 안내 카드 텍스트가 잘 읽히게 한다. */
+#camera-screen,
+#help-screen {
+  background-image: linear-gradient(rgba(8, 3, 2, 0.68), rgba(8, 3, 2, 0.82)),
+    url("/Create_a_beautiful_clean_cinematic_game-art_imag-1783497893729.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
 .screen-inner {
   width: 100%;
   max-width: 860px;
