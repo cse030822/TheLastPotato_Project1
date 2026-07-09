@@ -688,6 +688,47 @@ body {
   line-height: 1.6;
   color: #f3e6da;
 }
+/* 점수(여운의 중심) — 등급 색(currentColor)을 머금고 크게 카운트업된다. */
+#result-score {
+  margin-top: 18px;
+}
+.rscore-label {
+  font-size: 12px;
+  letter-spacing: 4px;
+  font-weight: 700;
+  color: var(--hud-dim);
+}
+#result-score-val {
+  font-size: 66px;
+  font-weight: 800;
+  line-height: 1.05;
+  color: currentColor;
+  text-shadow: 0 0 32px currentColor;
+  font-variant-numeric: tabular-nums;
+}
+#result-best {
+  margin-top: 2px;
+  min-height: 18px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #f3e6da;
+}
+#result-record {
+  margin-right: 8px;
+  color: #ffd76a;
+  animation: record-flash 0.9s ease-in-out infinite;
+}
+@keyframes record-flash {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+    text-shadow: 0 0 14px rgba(255, 215, 106, 0.85);
+  }
+}
+
 #result-stats {
   display: flex;
   justify-content: center;

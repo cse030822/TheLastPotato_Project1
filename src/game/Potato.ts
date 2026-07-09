@@ -20,7 +20,8 @@ export class Potato {
   alive = true;
   growth = 0; // 0(씨감자) ~ 1(완전 성장)
   planted = false; // 씨감자가 심어졌는지(등장 연출 후)
-  glowing = false; // 이번 프레임 에너지를 받는 중(보호막)
+  glowing = false; // 지금 보호막이 켜져 있는지(shield>0에서 파생) — 곤충 접근 차단·발광
+  shield = 0; // 남은 보호막 지속 시간(초). 빔이 이 그루를 겨눌 때 리필된다.
   readonly protectRadius = 2.2; // 빛날 때 곤충 접근 차단 반경
 
   /** 감자알이 새로 돋을 때(월드 좌표) 호출 — 수확 연출·사운드용. Garden이 주입. */
@@ -215,6 +216,7 @@ export class Potato {
     this.growth = 0;
     this.planted = false;
     this.glowing = false;
+    this.shield = 0;
     this.glow = 0;
     this.tuber.visible = false;
     this.foliage.visible = false;

@@ -40,6 +40,7 @@ export class Garden {
   private readonly projectiles: Projectile[] = [];
   private readonly energizeRadius = 1.8;
   private readonly growthRate = 0.05; // 초당 성장(약 20초에 완전 성숙 — 감자알을 모두 맺기까지)
+  private readonly shieldLinger = 1.8; // 빔이 떠난 뒤에도 보호막이 유지되는 시간(초)
   private ended = false;
   private missionElapsed = 0; // 첫 씨앗을 심은 순간부터의 경과(초) — HUD 타이머·승리 판정용
   private timerStarted = false; // 첫 씨앗을 심으면 타이머 시작
@@ -83,6 +84,19 @@ export class Garden {
   /** 현재 심긴 감자 기준 최대 감자알 수. */
   get maxHarvest(): number {
     return this.potatoes.length * TUBERS_PER_PLANT;
+  }
+
+  /** 버틴 시간(초, 60초 상한). 결과 통계·점수용. */
+  get survivedSec(): number {
+    return Math.min(Math.floor(this.missionElapsed), this.survivalDuration);
+  }
+
+  /**
+   * 최종 점수 = 수확한 감자알×100 + 살아남은 그루×500 + 버틴 시간(초)×10.
+   * 종료 시점(survivors 확정 후)에 읽는다. 완전 방어 시 대략 3600점대.
+   */
+  get finalScore(): number {
+    return this.totalHarvest * 100 + this.survivors * 500 + this.survivedSec * 10;
   }
 
   /** 에너지 단계 진입 여부(= 감자 성장/에너지 공급이 가능한 시점). */
@@ -210,21 +224,33 @@ export class Garden {
     // 타이머는 곤충이 등장하는 퇴비 단계부터(퇴비·에너지 관통) 게임 종료 전까지 흐른다.
     if (this.timerStarted && !this.ended) this.missionElapsed += dt;
 
-    // 에너지 공급 판정: 감자별로 이번 프레임 발광 여부를 갱신.
-    // 보호막(glowing)은 "이번 프레임 에너지 빔을 받는 동안"에만 생긴다.
+    // 에너지 공급 판정. 보호막(glowing)은 남은 shield 시간으로 유지된다.
+    //  - 매 프레임 shield를 흘려보내고(glowing = shield>0),
+    //  - 빔은 "가장 가까운 한 그루"만 키우고 그 그루의 shield를 가득 채운다.
+    // → 감자 3개를 붙여 심어 빔 하나로 셋 다 동시에 지키던 전략을 막는다(근접 심기 무력화).
+    //   대신 shield가 잠깐(shieldLinger초) 남으므로, 빔을 세 그루 사이로 훑으며 번갈아 지킬 수 있다.
     // 다 자란 감자라도 방치하면 곤충이 갉아먹어 성장이 되돌아가므로 계속 지켜야 한다.
     for (const pot of this.potatoes) {
-      pot.glowing = false;
+      pot.shield = Math.max(0, pot.shield - dt);
+      pot.glowing = pot.shield > 0;
     }
     if (this.energyStarted && energyBeam.active && energyBeam.grounded) {
+      let target: Potato | null = null;
+      let bestD = this.energizeRadius * this.energizeRadius;
       for (const pot of this.potatoes) {
         if (!pot.alive || !pot.planted) continue;
         const dx = pot.position.x - energyBeam.impactPoint.x;
         const dz = pot.position.z - energyBeam.impactPoint.z;
-        if (Math.hypot(dx, dz) < this.energizeRadius) {
-          pot.growth = Math.min(1, pot.growth + this.growthRate * dt);
-          pot.glowing = true;
+        const d = dx * dx + dz * dz;
+        if (d < bestD) {
+          bestD = d;
+          target = pot;
         }
+      }
+      if (target) {
+        target.growth = Math.min(1, target.growth + this.growthRate * dt);
+        target.shield = this.shieldLinger;
+        target.glowing = true;
       }
     }
 

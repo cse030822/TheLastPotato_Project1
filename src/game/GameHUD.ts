@@ -30,11 +30,18 @@ export class GameHUD {
   private overlayTitle = document.getElementById("result-title")!;
   private overlaySub = document.getElementById("result-sub")!;
   private overlayStats = document.getElementById("result-stats")!;
+  private scoreValEl = document.getElementById("result-score-val")!;
+  private bestTextEl = document.getElementById("result-best-text")!;
+  private recordEl = document.getElementById("result-record") as HTMLElement;
 
   // 감자 인덱스별 원형 링 DOM(재사용).
   private gauges: { root: HTMLDivElement; prog: SVGCircleElement; pct: HTMLSpanElement }[] = [];
   private lastResult: string | null = null;
+  private scoreAnim = 0; // 점수 카운트업 rAF id(0=없음).
   private readonly _wp = new THREE.Vector3();
+
+  /** 최고 점수 저장 키(localStorage). */
+  private static readonly BEST_KEY = "mars.bestScore.v1";
 
   constructor(private readonly camera: THREE.PerspectiveCamera) {}
 
@@ -154,6 +161,8 @@ export class GameHUD {
     let sub = "";
     const stats: string[] = [];
 
+    const secs = garden.survivedSec;
+
     if (tier === "perfect") {
       badge = "🏆";
       const grown = garden.winReason === "grown";
@@ -161,16 +170,17 @@ export class GameHUD {
       sub = grown
         ? "감자 3그루를 모두 100%까지 키워냈습니다 — 붉은 화성이 초록으로 물들었습니다."
         : "3그루를 모두 끝까지 지켜냈습니다 — 척박한 화성에 마침내 생명이 뿌리내렸습니다.";
-      stats.push(`🥔 생존 ${survivors}/${total}그루`, `🌱 수확한 감자알 ${harvest}개`);
+      stats.push(`🥔 생존 ${survivors}/${total}그루`, `🌱 수확한 감자알 ${harvest}개`, `⏱ 버틴 시간 ${secs}초`);
     } else if (tier === "partial") {
       badge = "🌿";
       title = "생명을 지켜냈다";
       sub = `${survivors}그루를 끝까지 지켜냈습니다. 전부는 아니어도, 척박한 화성에서 살려낸 소중한 생명입니다.`;
-      stats.push(`🥔 생존 ${survivors}/${total}그루`, `🌱 수확한 감자알 ${harvest}개`);
+      stats.push(`🥔 생존 ${survivors}/${total}그루`, `🌱 수확한 감자알 ${harvest}개`, `⏱ 버틴 시간 ${secs}초`);
     } else {
       badge = "🥀";
       title = "밭이 전멸했습니다";
       sub = "곤충이 감자를 모두 삼켰습니다. 하지만 화성 개척은 몇 번이고 다시 도전할 수 있습니다.";
+      stats.push(`🌱 수확한 감자알 ${harvest}개`, `⏱ 버틴 시간 ${secs}초`);
     }
 
     this.overlayBadge.textContent = badge;
@@ -180,13 +190,66 @@ export class GameHUD {
       .map((s) => `<span class="rs-chip">${s}</span>`)
       .join("");
     this.overlayStats.style.display = stats.length ? "flex" : "none";
+
+    // 점수·최고기록: 신기록이면 저장하고 배지를 켠다. 점수는 0에서 카운트업.
+    const score = garden.finalScore;
+    const prevBest = this.readBest();
+    const isRecord = score > prevBest;
+    if (isRecord) this.writeBest(score);
+    this.recordEl.hidden = !isRecord;
+    this.bestTextEl.textContent = `최고 기록 ${Math.max(score, prevBest).toLocaleString()}점`;
+    this.animateScore(score);
+
     this.overlayEl.classList.add("visible");
   }
 
-  /** 재시작: 게이지·오버레이 숨김. */
+  /** 저장된 최고 점수(없거나 손상 시 0). */
+  private readBest(): number {
+    try {
+      const v = Number(localStorage.getItem(GameHUD.BEST_KEY));
+      return Number.isFinite(v) && v > 0 ? v : 0;
+    } catch {
+      return 0; // 사생활 보호 모드 등 localStorage 불가 시
+    }
+  }
+
+  private writeBest(score: number): void {
+    try {
+      localStorage.setItem(GameHUD.BEST_KEY, String(score));
+    } catch {
+      /* 저장 불가는 무시 — 이번 판 점수만 표시된다 */
+    }
+  }
+
+  /** 점수를 0→target으로 약 0.9초간 부드럽게 카운트업(easeOutCubic). */
+  private animateScore(target: number): void {
+    if (this.scoreAnim) cancelAnimationFrame(this.scoreAnim);
+    const dur = 900;
+    const start = performance.now();
+    const tick = (now: number): void => {
+      const k = Math.min(1, (now - start) / dur);
+      const eased = 1 - Math.pow(1 - k, 3);
+      this.scoreValEl.textContent = Math.round(target * eased).toLocaleString();
+      if (k < 1) {
+        this.scoreAnim = requestAnimationFrame(tick);
+      } else {
+        this.scoreValEl.textContent = target.toLocaleString();
+        this.scoreAnim = 0;
+      }
+    };
+    this.scoreAnim = requestAnimationFrame(tick);
+  }
+
+  /** 재시작: 게이지·오버레이 숨김 + 점수 카운트업 중단. */
   reset(): void {
     this.lastResult = null;
     this.overlayEl.classList.remove("visible");
     for (const g of this.gauges) g.root.style.display = "none";
+    if (this.scoreAnim) {
+      cancelAnimationFrame(this.scoreAnim);
+      this.scoreAnim = 0;
+    }
+    this.scoreValEl.textContent = "0";
+    this.recordEl.hidden = true;
   }
 }
