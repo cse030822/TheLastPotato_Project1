@@ -859,6 +859,39 @@ body:not([data-screen="playing"]):not([data-screen="practice"]) #potato-gauges {
   display: none !important;
 }
 
+/* 연습 모드 상단 배너: 기본 숨김, 연습 화면에서만 상단 중앙에 상시 표시.
+   playing 모드의 타이머 자리(top:20px)가 연습에선 비므로 그 자리에 둔다. */
+#practice-hint {
+  display: none;
+}
+body[data-screen="practice"] #practice-hint {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 16;
+  padding: 9px 24px;
+  border-radius: 999px;
+  background: rgba(14, 8, 6, 0.7);
+  border: 1px solid rgba(125, 255, 146, 0.5);
+  box-shadow: 0 0 22px rgba(125, 255, 146, 0.28), inset 0 0 12px rgba(125, 255, 146, 0.12);
+  color: #eaffef;
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+}
+#practice-hint .ph-ico {
+  font-size: 18px;
+  color: #7dff92;
+}
+#practice-hint .ph-text b {
+  color: #7dff92;
+}
+
 /* 연습 모드 하단 바: 기본 숨김, 연습 화면에서만 표시. */
 #practice-bar {
   display: none;

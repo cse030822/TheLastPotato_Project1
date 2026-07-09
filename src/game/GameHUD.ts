@@ -99,15 +99,19 @@ export class GameHUD {
       : "60초 동안 외계 생명체로부터 방어";
     this.objDefendEl.classList.toggle("done", tl <= 0 && garden.phase === "won");
 
-    // 조작 안내(단계별)
+    // 조작 안내(단계별). 연습 모드는 '자세→성장→실전' 흐름에 맞춰 문구가 바뀐다.
     this.controlsTextEl.textContent =
       garden.phase === "seed"
-        ? "총 자세로 원하는 자리를 조준 → 트리거를 당겨 씨앗 심기!"
+        ? garden.practice
+          ? "손가락 총 자세로 조준 → 검지와 중지를 당겨 씨앗 심기!"
+          : "총 자세로 원하는 자리를 조준 → 트리거를 당겨 씨앗 심기!"
         : garden.phase === "compost"
           ? "잠시 대기… 곧 에너지가 흐릅니다."
           : garden.phase === "energy"
             ? garden.practice
-              ? "오른손 트리거로 에너지 분사 → 감자를 마음껏 키워보세요!"
+              ? garden.totalHarvest >= 3
+                ? "손에 익었다면 왼손으로 '실전 시작'을 눌러 실전으로 가세요!"
+                : "오른손 에너지를 감자에 쏴 키우며 손의 감을 익혀보세요"
               : "오른손 트리거로 에너지 분사 → 감자를 키우세요! 왼손으로 곤충 격퇴."
             : "[R] 키로 다시 시작.";
 

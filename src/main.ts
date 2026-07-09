@@ -85,6 +85,10 @@ let fxFirstBug = false;
 let fx30 = false;
 let fx10 = false;
 let fxGrown = false;
+// 연습 모드 전용 단계별 안내 이팩트 플래그(각 1회): 자세→성장→실전 안내.
+let fxPracAim = false;
+let fxPracGrow = false;
+let fxPracReady = false;
 
 // 외계 곤충 웨이브. 에너지 단계부터 등장 → 가장 가까운(비보호) 감자로 접근.
 const bugs = new BugManager(mars.scene, garden.potatoes, () => {});
@@ -226,6 +230,7 @@ function restart(): void {
   harvestFx.clear();
   eventFx.reset();
   fxSeed = fxCompost = fxFirstBug = fx30 = fx10 = fxGrown = false;
+  fxPracAim = fxPracGrow = fxPracReady = false;
   energy = 100;
   aimLeft.present = false;
   aimRight.present = false;
@@ -416,6 +421,7 @@ async function ensureMedia(wantId: string): Promise<boolean> {
     overlay.resize();
     mediaReady = true;
     screens.setStatus("");
+    screens.setBusy(false); // 버튼 비활성 해제 — 연습 후 카메라 화면으로 돌아와도 다시 눌리게.
     return true;
   } catch (err) {
     console.error("[화성 정원사] 카메라/모델 초기화 실패:", err);
@@ -570,38 +576,71 @@ function loop(now: number): void {
   harvestFx.update(dt);
   gameHud.update(garden, bugs.count, energy);
 
-  // 9) 이벤트 이팩트(각각 한 번씩): 씨앗 발사 · 퇴비 공급 · 곤충 첫 등장 · 30초/10초 기점 · 첫 완전 성장.
-  //    이미지는 play({..., image: "/파일.png"})로 넣으면 이팩트 중앙에 크게 박힌다.
-  if (!fxSeed && garden.phase === "seed") {
-    fxSeed = true;
-    eventFx.play({ tone: "life", title: "감자를 발사하라!", sub: "오른손 트리거로 씨앗을 심어라" });
-    sound.event("life");
-  }
-  if (!fxCompost && garden.phase === "compost") {
-    fxCompost = true;
-    eventFx.play({ tone: "warn", title: "퇴비를 뿌려라!", sub: "감자밭에 영양을 공급한다" });
-    sound.event("warn");
-  }
-  if (!fxFirstBug && garden.threatsActive && bugs.count > 0) {
-    fxFirstBug = true;
-    eventFx.play({ tone: "danger", title: "외계 곤충 출현!", sub: "왼손 붉은 에너지로 격퇴하라!" });
-    sound.event("danger");
-  }
-  if (garden.phase === "energy") {
-    if (!fx30 && garden.timeLeft <= 30) {
-      fx30 = true;
-      eventFx.play({ tone: "warn", title: "절반 지점!", sub: "30초 남았다 — 감자를 지켜라" });
+  // 9) 이벤트 이팩트(각각 한 번씩). 이미지는 play({..., image: "/파일.png"})로 중앙에 크게 박힌다.
+  if (appState === "practice") {
+    // 연습 모드: 압박 없이 '자세 → 성장 → 실전' 흐름을 이팩트로 단계별 안내한다.
+    //  ① 총 자세로 씨앗 심기(발사법) → ② 감자에 에너지를 쏴 키우며 손의 감 익히기
+    //  → ③ 충분히 익숙해지면(감자알 몇 개 수확) 왼손으로 실전 시작 누르라고 안내.
+    if (!fxPracAim && garden.phase === "seed") {
+      fxPracAim = true;
+      eventFx.play({
+        tone: "life",
+        title: "총을 쏴 씨앗을 심어라",
+        sub: "손가락 총 자세로 조준 → 검지와 중지를 당겨 발사!",
+      });
+      sound.event("life");
+    }
+    if (!fxPracGrow && garden.phase === "energy") {
+      fxPracGrow = true;
+      eventFx.play({
+        tone: "life",
+        title: "감자를 키워라",
+        sub: "오른손 에너지를 감자에 쏴 성장시키며 손의 감을 익혀요",
+      });
+      sound.event("life");
+    }
+    if (!fxPracReady && garden.totalHarvest >= 3) {
+      fxPracReady = true;
+      eventFx.play({
+        tone: "warn",
+        title: "이제 실전이다!",
+        sub: "손이 익숙해졌다면 왼손으로 '실전 시작'을 눌러 가세요",
+      });
       sound.event("warn");
     }
-    if (!fx10 && garden.timeLeft <= 10) {
-      fx10 = true;
-      eventFx.play({ tone: "danger", title: "마지막 10초!", sub: "끝까지 버텨라!" });
+  } else {
+    // 본게임 이벤트: 씨앗 발사 · 퇴비 공급 · 곤충 첫 등장 · 30초/10초 기점 · 첫 완전 성장.
+    if (!fxSeed && garden.phase === "seed") {
+      fxSeed = true;
+      eventFx.play({ tone: "life", title: "감자를 발사하라!", sub: "오른손 트리거로 씨앗을 심어라" });
+      sound.event("life");
+    }
+    if (!fxCompost && garden.phase === "compost") {
+      fxCompost = true;
+      eventFx.play({ tone: "warn", title: "퇴비를 뿌려라!", sub: "감자밭에 영양을 공급한다" });
+      sound.event("warn");
+    }
+    if (!fxFirstBug && garden.threatsActive && bugs.count > 0) {
+      fxFirstBug = true;
+      eventFx.play({ tone: "danger", title: "외계 곤충 출현!", sub: "왼손 붉은 에너지로 격퇴하라!" });
       sound.event("danger");
     }
-    if (!fxGrown && garden.potatoes.some((p) => p.grown)) {
-      fxGrown = true;
-      eventFx.play({ tone: "life", title: "감자 완전 성장!", sub: "화성에 생명이 뿌리내렸다" });
-      sound.event("life");
+    if (garden.phase === "energy") {
+      if (!fx30 && garden.timeLeft <= 30) {
+        fx30 = true;
+        eventFx.play({ tone: "warn", title: "절반 지점!", sub: "30초 남았다 — 감자를 지켜라" });
+        sound.event("warn");
+      }
+      if (!fx10 && garden.timeLeft <= 10) {
+        fx10 = true;
+        eventFx.play({ tone: "danger", title: "마지막 10초!", sub: "끝까지 버텨라!" });
+        sound.event("danger");
+      }
+      if (!fxGrown && garden.potatoes.some((p) => p.grown)) {
+        fxGrown = true;
+        eventFx.play({ tone: "life", title: "감자 완전 성장!", sub: "화성에 생명이 뿌리내렸다" });
+        sound.event("life");
+      }
     }
   }
   }
