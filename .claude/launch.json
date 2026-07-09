@@ -1,11 +1,12 @@
 {
   "version": "0.0.1",
+  "autoPort": true,
   "configurations": [
     {
-      "name": "mars-dev",
+      "name": "mars-dev-verify",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["dev", "--port", "5188", "--strictPort"],
-      "port": 5188
+      "runtimeArgs": ["dev", "--port", "5199", "--strictPort"],
+      "port": 5199
     }
   ]
 }

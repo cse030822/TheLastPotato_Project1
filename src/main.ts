@@ -26,7 +26,7 @@ const pip = document.getElementById("cam-pip") as HTMLDivElement;
 // --- 모듈 구성 ---
 const mars = new MarsScene(sceneCanvas);
 const tracker = new HandTracker(video);
-const overlay = new HandSkeletonOverlay(overlayCanvas);
+const overlay = new HandSkeletonOverlay(overlayCanvas, video);
 const hud = new HUD();
 const jets = new JetController(mars.scene);
 
