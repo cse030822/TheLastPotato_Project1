@@ -195,7 +195,7 @@ window.addEventListener("keydown", (e) => {
   sound.unlock(); // 첫 사용자 제스처에서 오디오 컨텍스트 준비
   if (e.key === "Escape") {
     if (helpOpen) setHelp(false);
-    else if (appState === "practice") quit(); // 연습 중 Esc(도움말 닫힘) → 나가기
+    else if (appState === "practice") exitPracticeToHowto(); // 연습 중 Esc → 플레이 방법 안내로
     return;
   }
   if (appState === "practice" && e.key === "Enter") {
@@ -318,6 +318,12 @@ const btnResultQuit = document.getElementById("btn-result-quit")!;
 const resultButtons: HTMLElement[] = [btnResultRestart, btnResultQuit];
 const resultPointer = new PointerSelect(); // 조준점이 버튼 위에 머물면 자동 선택
 
+// --- 연습 바 버튼(실전 시작 / 나가기) — 마우스 클릭 + 손 포인터(dwell) 공용 ---
+const btnPracticeStart = document.getElementById("btn-practice-start")!;
+const btnPracticeExit = document.getElementById("btn-practice-exit")!;
+const practiceButtons: HTMLElement[] = [btnPracticeStart, btnPracticeExit];
+const practicePointer = new PointerSelect(); // 연습 중 조준점을 버튼에 머물러 선택
+
 btnResultRestart.addEventListener("click", () => {
   sound.unlock();
   resultPointer.reset();
@@ -336,6 +342,17 @@ function quit(): void {
   sound.playMenuMusic(); // 타이틀로 돌아가면 메뉴 배경음악(후보 2)으로 복귀
   appState = "intro";
   screens.show("intro");
+}
+
+/** 연습 종료: 상태를 초기화하고 '플레이 방법 안내'(카메라) 화면으로 돌아간다. */
+function exitPracticeToHowto(): void {
+  resultPointer.reset();
+  practicePointer.reset();
+  restart();
+  garden.practice = false;
+  appState = "intro"; // 카메라(플레이 방법 안내) 화면에서는 게임 루프 정지
+  screens.show("camera");
+  sound.playMenuMusic(); // 안내 화면 배경음악(후보 2)으로 복귀
 }
 
 /**
@@ -410,19 +427,20 @@ async function startPractice(): Promise<void> {
     garden.practice = true; // 타이머·승패 판정 정지(무한 연습) + 곤충 미등장
     appState = "practice";
     screens.show("practice");
-    sound.playGameMusic();
+    sound.stopMusic(); // 연습 모드는 배경음악 없이(효과음만)
   }
   startingGame = false;
 }
 
-// 연습 모드 하단 바 버튼: 실전 시작 / 나가기.
-document.getElementById("btn-practice-start")!.addEventListener("click", () => {
+// 연습 모드 하단 바 버튼: 실전 시작 / 나가기 (마우스 클릭 + 손 dwell 공용).
+btnPracticeStart.addEventListener("click", () => {
   sound.unlock();
+  practicePointer.reset();
   void startGame();
 });
-document.getElementById("btn-practice-exit")!.addEventListener("click", () => {
+btnPracticeExit.addEventListener("click", () => {
   sound.unlock();
-  quit();
+  exitPracticeToHowto();
 });
 
 let prev = performance.now();
@@ -496,14 +514,11 @@ function loop(now: number): void {
 
   // 결과 버튼(다시하기/종료)을 손 조준점으로 가리켜 선택. 오른손 우선, 없으면 왼손.
   const ptr = aimRight.present ? aimRight : aimLeft.present ? aimLeft : null;
-  resultPointer.update(
-    resultActive,
-    ptr !== null,
-    ptr ? ptr.x * window.innerWidth : 0,
-    ptr ? ptr.y * window.innerHeight : 0,
-    resultButtons,
-    dt,
-  );
+  const ptrX = ptr ? ptr.x * window.innerWidth : 0;
+  const ptrY = ptr ? ptr.y * window.innerHeight : 0;
+  resultPointer.update(resultActive, ptr !== null, ptrX, ptrY, resultButtons, dt);
+  // 연습 중에는 조준점으로 하단 바 버튼(실전 시작/나가기)을 손으로 가리켜 선택.
+  practicePointer.update(appState === "practice", ptr !== null, ptrX, ptrY, practiceButtons, dt);
 
   // 에너지 미터: 오른손 분사 중엔 감소, 아니면 회복(연출용, 0~100 클램프).
   const emitting = aimRight.present && aimRight.state === "FIRE";

@@ -882,29 +882,35 @@ body[data-screen="practice"] #practice-bar {
   color: var(--hud-dim);
   line-height: 1.4;
 }
-.pb-btn {
-  font-family: inherit;
-  font-weight: 700;
-  font-size: 14px;
+/* 연습 바 버튼: 타이틀 화면 버튼과 같은 시안 글로우 사이버 룩.
+   기반은 결과 화면 .result-btn(테두리·손 dwell 채움 rb-fill 재사용),
+   여기서 색(currentColor=시안)·글로우·크기만 덧입힌다. */
+.pb-action {
+  min-width: 128px;
+  padding: 11px 20px;
+  font-size: 15px;
   white-space: nowrap;
-  padding: 9px 16px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 233, 214, 0.28);
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--hud-fg);
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  color: #8be8ff; /* currentColor → 테두리·채움(rb-fill)·글로우에 반영 */
+  border-color: rgba(139, 232, 255, 0.5);
+  box-shadow: 0 0 18px rgba(70, 200, 255, 0.22);
+  transition: border-color 0.2s, background 0.2s, transform 0.2s, box-shadow 0.2s;
 }
-.pb-btn:hover {
-  background: rgba(255, 255, 255, 0.14);
+.pb-action .rb-label {
+  color: #eaffff;
+  text-shadow: 0 0 10px rgba(70, 200, 255, 0.5);
 }
-.pb-primary {
-  border-color: rgba(125, 255, 146, 0.55);
-  background: rgba(125, 255, 146, 0.16);
-  color: #d6ffde;
+.pb-action:hover,
+.pb-action[data-hover="1"] {
+  box-shadow: 0 0 28px rgba(70, 200, 255, 0.5);
 }
-.pb-primary:hover {
-  background: rgba(125, 255, 146, 0.28);
+/* '실전 시작'은 밝은 시안 배경으로 강조. */
+.pb-action-go {
+  background: rgba(70, 200, 255, 0.16);
+  border-color: rgba(139, 232, 255, 0.72);
+}
+.pb-action-go:hover,
+.pb-action-go[data-hover="1"] {
+  background: rgba(70, 200, 255, 0.26);
 }
 
 /* 연습 모드에서는 점수·시간 관련 패널을 감춰 '무한 연습'임을 분명히 한다. */
