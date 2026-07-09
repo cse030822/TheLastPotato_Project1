@@ -309,8 +309,27 @@ function setHelp(open: boolean): void {
   helpOpen = open;
   helpScreen.classList.toggle("visible", open);
 }
-document.getElementById("btn-help-open")!.addEventListener("click", () => setHelp(true));
+const btnHelpOpen = document.getElementById("btn-help-open")!;
+btnHelpOpen.addEventListener("click", () => setHelp(true));
 document.getElementById("btn-help-close")!.addEventListener("click", () => setHelp(false));
+
+// --- 본게임 상단 바 버튼(재시작 / 도움말 / 종료) — 마우스 클릭 + 손 포인터(dwell) 공용 ---
+const btnGameRestart = document.getElementById("btn-game-restart")!;
+const btnGameQuit = document.getElementById("btn-game-quit")!;
+// 플레이 도중 실수 선택을 줄이려 dwell 시간을 조금 길게(기본 1.1초 → 1.6초).
+const gamePointer = new PointerSelect(1.6);
+// 재시작·도움말·종료를 손 조준점(dwell)으로도 고를 수 있게 한 묶음으로.
+const gameButtons: HTMLElement[] = [btnGameRestart, btnHelpOpen, btnGameQuit];
+btnGameRestart.addEventListener("click", () => {
+  sound.unlock();
+  gamePointer.reset();
+  restart();
+});
+btnGameQuit.addEventListener("click", () => {
+  sound.unlock();
+  gamePointer.reset();
+  quit();
+});
 
 // --- 결과 화면 버튼(다시하기 / 종료) — 마우스 클릭 + 손 포인터(dwell) 공용 ---
 const btnResultRestart = document.getElementById("btn-result-restart")!;
@@ -519,6 +538,8 @@ function loop(now: number): void {
   resultPointer.update(resultActive, ptr !== null, ptrX, ptrY, resultButtons, dt);
   // 연습 중에는 조준점으로 하단 바 버튼(실전 시작/나가기)을 손으로 가리켜 선택.
   practicePointer.update(appState === "practice", ptr !== null, ptrX, ptrY, practiceButtons, dt);
+  // 본게임 중(결과 오버레이가 없을 때)에는 상단 바 버튼(재시작/도움말/종료)을 손으로 가리켜 선택.
+  gamePointer.update(appState === "playing" && !resultActive, ptr !== null, ptrX, ptrY, gameButtons, dt);
 
   // 에너지 미터: 오른손 분사 중엔 감소, 아니면 회복(연출용, 0~100 클램프).
   const emitting = aimRight.present && aimRight.state === "FIRE";

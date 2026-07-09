@@ -1263,29 +1263,58 @@ body[data-screen="practice"] #wave-panel {
   color: #7dff92;
 }
 
-/* 게임 중 도움말 열기 버튼(HUD 상단 중앙, 타이머 바로 아래). */
-.help-open-btn {
+/* 본게임 상단 메타 컨트롤 바(재시작·도움말·종료) — 타이머 바로 아래 중앙.
+   기반은 결과 화면 .result-btn(테두리·손 dwell 채움 rb-fill 재사용),
+   여기서 색(시안)·크기만 압축해 플레이를 가리지 않는 작은 알약으로. */
+#game-bar {
+  display: none;
+}
+body[data-screen="playing"] #game-bar {
+  display: flex;
+  gap: 10px;
   position: absolute;
-  top: 70px;
+  top: 126px; /* 상단 HUD 밴드(목표·타이머·WAVE, ~116px)를 지나 겹치지 않게 */
   left: 50%;
   transform: translateX(-50%);
+  z-index: 16; /* HUD(10) 위, 결과 오버레이(20) 아래 */
   pointer-events: auto;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--hud-fg);
-  background: rgba(20, 8, 4, 0.55);
-  border: 1px solid rgba(150, 240, 232, 0.4);
-  border-radius: 999px;
-  padding: 6px 16px;
-  cursor: pointer;
-  backdrop-filter: blur(3px);
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
-.help-open-btn:hover {
-  color: #fff;
-  border-color: rgba(150, 240, 232, 0.8);
-  background: rgba(12, 30, 30, 0.6);
+.gb-btn {
+  min-width: 96px;
+  padding: 7px 15px;
+  font-size: 13px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  color: #8be8ff; /* currentColor → 테두리·dwell 채움에 반영 */
+  border-color: rgba(139, 232, 255, 0.45);
+  background: rgba(14, 7, 5, 0.55);
+  box-shadow: 0 0 14px rgba(70, 200, 255, 0.16);
+  backdrop-filter: blur(3px);
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+.gb-btn .rb-label {
+  color: #eaffff;
+  text-shadow: 0 0 8px rgba(70, 200, 255, 0.45);
+}
+.gb-btn:hover,
+.gb-btn[data-hover="1"] {
+  border-color: rgba(139, 232, 255, 0.85);
+  box-shadow: 0 0 22px rgba(70, 200, 255, 0.45);
+}
+/* '종료'는 위험한 동작이라 붉은 톤으로 구분. */
+.gb-quit {
+  color: #ff9d86;
+  border-color: rgba(255, 157, 134, 0.45);
+  box-shadow: 0 0 14px rgba(255, 90, 60, 0.16);
+}
+.gb-quit .rb-label {
+  color: #ffe9e2;
+  text-shadow: 0 0 8px rgba(255, 100, 70, 0.5);
+}
+.gb-quit:hover,
+.gb-quit[data-hover="1"] {
+  border-color: rgba(255, 157, 134, 0.85);
+  box-shadow: 0 0 22px rgba(255, 90, 60, 0.45);
 }
 .howto-grid {
   display: grid;

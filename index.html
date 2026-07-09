@@ -79,8 +79,24 @@
         <span class="hand-hint">[D] 뼈대 · [H] 도움말 · [R] 재시작</span>
       </div>
 
-      <!-- 게임 중 언제든 도움말(플레이 방법) 열기 -->
-      <button id="btn-help-open" class="help-open-btn" type="button">❔ 도움말</button>
+    </div>
+
+    <!-- 본게임 상단 메타 컨트롤 바: 재시작 · 도움말 · 종료.
+         마우스 클릭 + 손 dwell(조준점을 버튼에 머물러 선택) 공용.
+         상단 하늘 영역이라 플레이 중 실수 선택 위험이 낮다. -->
+    <div id="game-bar">
+      <button id="btn-game-restart" class="result-btn gb-btn" type="button">
+        <span class="rb-fill"></span>
+        <span class="rb-label">🔁 재시작</span>
+      </button>
+      <button id="btn-help-open" class="result-btn gb-btn" type="button">
+        <span class="rb-fill"></span>
+        <span class="rb-label">❔ 도움말</span>
+      </button>
+      <button id="btn-game-quit" class="result-btn gb-btn gb-quit" type="button">
+        <span class="rb-fill"></span>
+        <span class="rb-label">⏻ 종료</span>
+      </button>
     </div>
 
     <!-- 게임 중 이벤트 이팩트(곤충 출현·시간 기점·완전 성장) — 게임을 멈추지 않는 연출 -->

@@ -5,8 +5,8 @@
     {
       "name": "mars-dev-verify",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["dev", "--port", "5199", "--strictPort"],
-      "port": 5199
+      "runtimeArgs": ["dev"],
+      "port": 5200
     }
   ]
 }
