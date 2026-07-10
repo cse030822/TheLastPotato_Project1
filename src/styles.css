@@ -11,8 +11,10 @@
   --front-h: 100vh;
   --front-right: 0px;
   --front-bottom: 0px;
-  /* 하단 고정 HUD의 아래쪽 여백. 설계 높이(1200px)의 10% → 화면 안에 넉넉히 들어오게. */
-  --hud-bottom: 120px;
+  /* 메타존에서 플레이 UI(설계 박스)를 정면 패널에 맞춰 배치할 좌상단 좌표.
+     기본값은 창 전체(일반 모드)로 둔다. layout.ts가 갱신한다. */
+  --ui-x: 0px;
+  --ui-y: 0px;
 }
 
 * {
@@ -46,7 +48,7 @@ body {
 #cam-pip {
   position: fixed;
   right: 18px;
-  bottom: var(--hud-bottom);
+  bottom: 18px;
   width: 320px;
   height: 240px;
   border: 2px solid rgba(255, 233, 214, 0.35);
@@ -318,7 +320,7 @@ body {
 /* --- 에너지(좌하단) --- */
 #energy-panel {
   left: 20px;
-  bottom: var(--hud-bottom);
+  bottom: 20px;
   width: 210px;
 }
 .ep-head {
@@ -364,7 +366,7 @@ body {
 /* --- 조작 방법(우하단) --- */
 #controls-panel {
   right: 20px;
-  bottom: var(--hud-bottom);
+  bottom: 20px;
   max-width: 260px;
 }
 .cp-title {
@@ -392,7 +394,7 @@ body {
 /* --- 손 인식 상태(하단 중앙, 보조) --- */
 #hand-strip {
   position: absolute;
-  bottom: var(--hud-bottom);
+  bottom: 22px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -904,7 +906,7 @@ body[data-screen="practice"] #practice-bar {
   gap: 14px;
   position: fixed;
   left: 50%;
-  bottom: var(--hud-bottom);
+  bottom: 22px;
   transform: translateX(-50%);
   z-index: 25;
   padding: 10px 14px;
@@ -1422,8 +1424,8 @@ body[data-screen="playing"] #game-bar {
 body.meta #play-ui {
   display: block;
   position: fixed;
-  left: var(--front-x);
-  top: var(--front-y);
+  left: var(--ui-x);
+  top: var(--ui-y);
   width: var(--design-w);
   height: var(--design-h);
   transform: scale(var(--front-scale));
@@ -1435,8 +1437,8 @@ body.meta #play-ui {
    가운데(전면)에 작게 들어가고, 양옆·위·아래는 3D가 검정이라 검게 남는다.
    (플레이 UI(#play-ui)와 완전히 같은 축소 방식. 설계 박스 안에 다 들어가 스크롤 없음.) */
 body.meta .screen {
-  left: var(--front-x);
-  top: var(--front-y);
+  left: var(--ui-x);
+  top: var(--ui-y);
   width: var(--design-w);
   height: var(--design-h);
   right: auto;

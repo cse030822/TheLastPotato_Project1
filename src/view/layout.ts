@@ -136,10 +136,19 @@ class ViewLayout {
     // 창 오른쪽/아래 끝에서 정면 영역 끝까지의 거리(우·하단 고정 요소용: PIP·바 등).
     s.setProperty("--front-right", `${window.innerWidth - (f.x + f.w)}px`);
     s.setProperty("--front-bottom", `${window.innerHeight - (f.y + f.h)}px`);
-    // 플레이 UI 설계 해상도 + 정면 패널에 맞춘 축소 배율.
+    // 플레이 UI 설계 해상도.
     s.setProperty("--design-w", `${DESIGN_W}px`);
     s.setProperty("--design-h", `${DESIGN_H}px`);
-    s.setProperty("--front-scale", `${this.meta ? f.w / DESIGN_W : 1}`);
+    // 설계 박스(2020×1200)를 정면 패널 '안에' 통째로 넣는(contain) 축소 배율.
+    // 가로 확대(META_H_STRETCH)로 패널이 설계보다 가로로 길어지면 세로가 먼저 꽉 차므로
+    // 폭이 아닌 '작은 쪽'에 맞춰야 UI(특히 하단 HUD)가 패널 밖으로 넘치지 않는다.
+    const scale = this.meta ? Math.min(f.w / DESIGN_W, f.h / DESIGN_H) : 1;
+    s.setProperty("--front-scale", `${scale}`);
+    // 축소된 설계 박스를 정면 패널 가운데에 배치(남는 여백은 좌우/상하 대칭).
+    const boxW = DESIGN_W * scale;
+    const boxH = DESIGN_H * scale;
+    s.setProperty("--ui-x", `${this.meta ? f.x + (f.w - boxW) / 2 : 0}px`);
+    s.setProperty("--ui-y", `${this.meta ? f.y + (f.h - boxH) / 2 : 0}px`);
   }
 }
 
