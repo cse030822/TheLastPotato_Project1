@@ -28,8 +28,8 @@ export const META_WIDTHS: Record<RegionName, number> = {
 const META_ORDER: RegionName[] = ["left", "front", "right", "floor"];
 const META_TOTAL = META_ORDER.reduce((s, n) => s + META_WIDTHS[n], 0); // 6806
 const META_HEIGHT = 1200;
-/** 메타존 화면을 가로로만 늘리는 배율(1.0 = 원본, 1.10 = 10% 확대). */
-const META_H_STRETCH = 1.10;
+/** 메타존 화면을 가로로만 늘리는 배율(1.0 = 원본, 1.15 = 15% 확대). */
+const META_H_STRETCH = 1.15;
 /** 메타존 전체 화면 비율(가로÷세로 ≈ 5.67 — 아주 가로로 긴 띠). */
 const META_ASPECT = (META_TOTAL / META_HEIGHT) * META_H_STRETCH;
 

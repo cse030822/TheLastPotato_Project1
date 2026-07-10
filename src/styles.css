@@ -11,6 +11,8 @@
   --front-h: 100vh;
   --front-right: 0px;
   --front-bottom: 0px;
+  /* 하단 고정 HUD의 아래쪽 여백. 설계 높이(1200px)의 10% → 화면 안에 넉넉히 들어오게. */
+  --hud-bottom: 120px;
 }
 
 * {
@@ -44,7 +46,7 @@ body {
 #cam-pip {
   position: fixed;
   right: 18px;
-  bottom: 18px;
+  bottom: var(--hud-bottom);
   width: 320px;
   height: 240px;
   border: 2px solid rgba(255, 233, 214, 0.35);
@@ -316,7 +318,7 @@ body {
 /* --- 에너지(좌하단) --- */
 #energy-panel {
   left: 20px;
-  bottom: 20px;
+  bottom: var(--hud-bottom);
   width: 210px;
 }
 .ep-head {
@@ -362,7 +364,7 @@ body {
 /* --- 조작 방법(우하단) --- */
 #controls-panel {
   right: 20px;
-  bottom: 20px;
+  bottom: var(--hud-bottom);
   max-width: 260px;
 }
 .cp-title {
@@ -390,7 +392,7 @@ body {
 /* --- 손 인식 상태(하단 중앙, 보조) --- */
 #hand-strip {
   position: absolute;
-  bottom: 22px;
+  bottom: var(--hud-bottom);
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -902,7 +904,7 @@ body[data-screen="practice"] #practice-bar {
   gap: 14px;
   position: fixed;
   left: 50%;
-  bottom: 22px;
+  bottom: var(--hud-bottom);
   transform: translateX(-50%);
   z-index: 25;
   padding: 10px 14px;
